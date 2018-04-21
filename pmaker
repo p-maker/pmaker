@@ -1,0 +1,474 @@
+#!/usr/bin/python3
+
+import sys, os, os.path, configparser, subprocess, shutil, tempfile, time, html
+
+from concurrent.futures import ThreadPoolExecutor as Pool
+
+def error(msg):
+    print(msg)
+    sys.exit(1)
+    
+class Test:
+    def __init__(self, manual, path=None, cmd=None, group=""):
+        self.manual = manual
+
+        if manual:
+            self.path = path
+        else:
+            self.cmd = cmd
+        
+        self.group = group
+
+    def is_manual(self):
+        return self.manual
+
+    def get_path(self):
+        return self.path
+    
+    def get_cmd(self):
+        return self.cmd
+
+    def get_group(self):
+        return self.group
+    
+class Problem:
+    def __init__(self, home):
+        self.home = home
+        
+        parser = configparser.ConfigParser(delimiters=('=',), comment_prefixes=('#',))
+        with open(os.path.join(self.home, "problem.cfg"), "r") as f:
+            parser.readfp(f)
+
+        self.source_dir    = parser.get("files", "source_dir", fallback="source")
+        self.solutions_dir = parser.get("files", "solutions_dir", fallback="solutions")
+        
+        self.validator  = parser.get("files", "validator",  fallback=None)        
+        self.checker    = parser.get("files", "checker",    fallback=None)
+        self.script     = parser.get("files", "script",     fallback=None)
+
+        self.model      = parser.get("main", "model_solution", fallback=None)
+        self.timelimit  = parser.getfloat("main", "time_limit",    fallback=None)
+        
+        if not self.validator:
+            for validator in ["validator.cpp", "validate.cpp"]:
+                if os.path.exists(validator):
+                    self.validator = validator
+                if os.path.exists(os.path.join(self.source_dir, validator)):
+                    self.validator = os.path.join(self.source_dir, validator)
+        
+        if not self.checker:
+            for checker in ["checker.cpp", "check.cpp"]:
+                if os.path.exists(os.path.join(checker)):
+                    self.checker = checker
+
+        if not self.script:
+            for script in ["script", "script.sh", "script.py"]:
+                if os.path.exists(script):
+                    self.script = script
+
+        self.compile_cache = dict()
+        self.tests = None
+        os.makedirs("work", exist_ok=True)
+        
+    def call_cmd(self, cmd, cwd=None, text=True, nocache=False):
+        print("running: {}".format(cmd))
+        
+        if cwd == None:
+            cwd = self.home
+        
+        return subprocess.check_output(cmd, cwd=cwd, universal_newlines=text)
+
+    def compile(self, fl):
+        if fl in self.compile_cache:
+            return self.compile_cache[fl]
+        else:
+            os.makedirs(os.path.dirname(os.path.join("work", "compiled", fl)), exist_ok=True)
+            self.call_cmd(["g++", "-Wall", "-Wextra", "-std=c++14", "-O2", fl, "-o", os.path.join("work", "compiled", fl)])
+            self.compile_cache[fl] = os.path.join("work", "compiled", fl)
+
+            return os.path.join("work", "compiled", fl)
+    
+    def get_test_list(self):
+        if not self.script:
+            raise RuntimeError("script is not available")
+
+        if self.tests != None:
+            return self.tests
+
+        txt = self.call_cmd("./{}".format(self.script))
+        self.tests = []
+
+        cur_group = ""
+        for line in txt.split("\n"):
+            line = line.strip()
+            if line == "" or line.startswith("#"):
+                continue
+            
+            if line.startswith(":"):
+                if line.startswith(":set_group "):
+                    cur_group = line[len(":set_group "):]
+                elif line == ":unset_group":
+                    cur_group = None
+                elif line.startswith(":manual "):
+                    self.tests.append(Test(manual=True, path=line[len(":manual "):], group=cur_group))
+                else:
+                    raise RuntimeError("Invalid command in script file: {}".format(line))
+            else:
+                self.tests.append(Test(manual=False, cmd=line, group=cur_group))
+
+        return self.tests
+
+    def gen_tests(self):
+        print("generating tests")
+        
+        if self.checker:
+            self.compile(self.checker)
+        
+        tests = self.get_test_list()
+        if len(tests) >= 1000:
+            raise RuntimeError("too much tests")
+
+        if os.path.exists(os.path.join("work", "tests")):
+            shutil.rmtree(os.path.join("work", "tests"))
+        for (test, index) in zip(tests, range(1, 1001)):
+            output = None
+            if test.is_manual():
+                with open(os.path.join("tests.manual", test.get_path()), "r") as f:
+                    output = f.read()
+            else:
+                cmd = test.get_cmd()
+                
+                gen_name = os.path.join("source", cmd.split()[0])
+                if not gen_name.endswith(".cpp"):
+                    gen_name = gen_name + ".cpp"
+                generator = self.compile(gen_name)
+                
+                output = self.call_cmd([generator] + cmd.split()[1:])
+
+            os.makedirs(os.path.join("work", "tests"), exist_ok=True)
+            with open(os.path.join("work", "tests", "%03d" % index), "w") as f:
+                f.write(output)
+
+        if self.model:
+            self.compile(os.path.join(self.solutions_dir, self.model))
+            for (_, index) in zip(tests, range(1, 1001)):
+                with open(os.path.join("work", "tests", "%03d" % index), "rb") as inp:
+                    with open(os.path.join("work", "tests", "%03d.a" % index), "wb") as out:
+                        subprocess.check_call([os.path.join("work", "compiled", "solutions", self.model)], stdin=inp, stdout=out)
+
+        if not self.validator:
+            print("Validation skipped since there is no validator")
+        else:
+            self.compile(self.validator)
+            print("validating tests...")
+            for (test, index) in zip(tests, range(1, 1001)):
+                group_info = ["--group", test.get_group()] if test.get_group() else []
+
+                with open(os.path.join("work", "tests", "%03d" % index)) as test_file:
+                    responce = subprocess.run([os.path.join("work", "compiled", self.validator)] + group_info, stdin=test_file, stdout=subprocess.PIPE, universal_newlines=True)
+
+                if responce.returncode != 0:
+                    print("test %-3d: FAIL, validator returned %d code" % index % responce.returncode)
+                    raise RuntimeError("Failed to validate tests")            
+                else:
+                    print("test %-3d: OK" % index)
+
+                    
+def lookup_problem(base):
+    while True:
+        if os.path.isfile(os.path.join(base, "problem.cfg")):
+            return Problem(base)
+
+        if os.path.dirname(base) == base:
+            return None
+        
+        base = os.path.dirname(base)
+
+def main():
+    prob = lookup_problem(os.path.realpath("."))
+    if not prob:
+        error("fatal: couldn't find problem")
+
+    cmd = sys.argv[1] if len(sys.argv) >= 2 else None
+    
+    if (cmd == "tests" or cmd == None):
+        prob.gen_tests()
+    elif cmd == "invoke":
+        solutions = sys.argv[2:]
+        test_list = prob.get_test_list()
+        timelimit = prob.timelimit
+
+        if len(solutions) == 0:
+            error("fatal: please specify solutions to run")
+        
+        for sol in solutions:
+            prob.compile(os.path.join("solutions", sol))
+
+        os.makedirs(os.path.join("work", "temp"), exist_ok=True)
+        def judge(solution, test):
+            input_name = os.path.join("work", "tests", "%03d" % test)
+            answer_name = os.path.join("work", "tests", "%03d.a" % test)
+            
+            with tempfile.NamedTemporaryFile(prefix="out_", dir=os.path.join("work", "temp")) as output:
+                with open(input_name, "rb") as inp:
+                    tm0 = time.time()
+
+                    try:
+                        ret = subprocess.run([os.path.join("work", "compiled", "solutions", solution)], stdin=inp, timeout=(2 * prob.timelimit), stdout=output).returncode
+                    except subprocess.TimeoutExpired:
+                        return "HARD-TL"
+                    tm1 = time.time()
+
+                    taken = "%.2f" % (tm1 - tm0)
+                    
+                    if (ret != 0):
+                        return "RE ({})".format(taken)
+
+                    checking = subprocess.run([os.path.join("work", "compiled", prob.checker), input_name, answer_name, output.name], stdout=subprocess.PIPE, universal_newlines=True)
+                    if checking.returncode != 0:
+                        return "WA ({})".format(taken)
+
+                    if (tm1 - tm0 <= prob.timelimit):
+                        return "OK ({})".format(taken)
+                    
+                    return "TL ({})".format(taken)
+
+            
+        pool = Pool(max_workers=3)
+        results = [[pool.submit(judge, solutions[j], i + 1) for j in range(len(solutions))] for i in range(len(test_list))]
+
+        import http.server
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):
+                if self.path != "/":
+                    self.send_response(404)
+                    return
+                
+                self.send_response(200)
+
+                self.send_header('Content-type','text/html')
+                self.end_headers()
+
+                def write(s):
+                    self.wfile.write(bytes(s, "utf-8"))
+                
+                write("""
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+table {
+  border-collapse: collapse;
+}
+td {
+  padding: 2px;
+}
+.padd_line {
+  padding: 0.001px;
+}
+.cell, .centered {
+  text-align: center;
+}
+.cell_OK {
+  background-color: lightgreen;
+}
+.cell_RJ {
+  background-color: #fb6837;
+}
+</style>
+</head>
+<body>
+<table border>
+""")
+                write("<tr><td>test</td>\n")
+                write("".join(["<td>{}</td>".format(sol) for sol in solutions]))
+                write("</tr>\n")
+
+                prev_group = None
+                for (test, index) in zip(test_list, range(1, 1001)):
+                    if prev_group != None and prev_group != test.get_group():
+                        write("<td class=\"padd_line\"></td>")
+                    prev_group = test.get_group()
+                        
+                    write("<tr>")
+                    if test.get_group() != None:
+                        write("<td>{} ({})</td>".format(index, test.get_group()))
+                    else:
+                        write("<td>{}</td>".format(index))
+
+                    for j in range(len(solutions)):
+                        res = None
+                        if results[index - 1][j].done():
+                            res = results[index - 1][j].result()
+                        else:
+                            res = "pending"
+                        write("<td class=\"cell {}\">{}</td>".format("cell_" + res.split(" ")[0], res))
+                    
+                    write("</tr>")
+
+                write("""
+</table>
+</body>
+</html>
+""")
+                return
+
+        server = http.server.HTTPServer(("localhost", 8128), Handler)
+        print("please connect to http://localhost:8128")
+        server.serve_forever()
+    elif cmd == "view-tests":
+        tests = prob.get_test_list()
+        
+        import http.server
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):
+                def write(s):
+                    self.wfile.write(bytes(s, "utf-8"))
+                    
+                def shortly(path, limit=1024):
+                    try:
+                        with open(path, "r") as f:
+                            s = f.read(limit)
+                            s = html.escape(s)
+                            
+                            if len(s) == limit:
+                                s += "..."
+                            return "<span class=\"data_text\">" + s.replace("\n","<br>") + "<span class=\"data_text\">"
+                    except:
+                        (_, ex, _) = sys.exc_info()
+                        return "<span style=\"color:red\">failed to read: %s</span>" % (str(ex))
+                    
+                    
+                if self.path == '/':
+                    self.send_response(200)
+                    
+                    self.send_header('Content-type','text/html')
+                    self.end_headers()
+                             
+                    write("""
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+table {
+  border-collapse: collapse;
+  padding: 4px;
+}
+td#testno {
+  width: 5%;
+  padding: 8px;
+  font-weight: bold;
+}
+td#input, td#output {
+  width: 47.5%;
+  padding: 8px;
+  font-weight: bold;
+}
+td.data {
+  font-family: mono;
+  vertical-align: top;
+  padding: 4px;
+}
+.data_text {
+}
+</style>
+<script>
+function open_test(test, type) {
+  location = "/test_view/" + test + "/" + type;
+}
+</script>
+</head>
+<body>
+<table border>
+<tr><td id="testno">Test No</td><td id="input">Input</td> <td id="output">Output</td>
+""")
+
+                    for (test, index) in zip(tests, range(1, 1001)):
+                        write("<tr>")
+                        if test.get_group() != None:
+                            write("<td>Test {} ({})</td>".format(index, test.get_group()))
+                        else:
+                            write("<td>Test {}</td>".format(index))
+                        
+                        write("<td class=\"data\" onclick=\"open_test({}, {})\">".format("'" + str(index) + "'", "'input'"))
+                        write(shortly(os.path.join("work", "tests", "%03d" % index)))
+                        write("</td>")
+                        
+                        write("<td class=\"data\" onclick=\"open_test({}, {})\">".format("'" + str(index) + "'", "'output'"))
+                        write(shortly(os.path.join("work", "tests", "%03d.a" % index)))
+                        write("</td>")
+
+                        write("</tr>")
+                          
+                    write("""
+</table>
+</html>
+""")
+                else:
+                    parts = self.path.split("/")[1:]
+                    if len(parts) == 3 and parts[0] == "test_view" and parts[2] in ["input", "output"]:
+                        index = None
+                        try:
+                            index = int(parts[1])
+                        except:
+                            self.send_response(404)
+                            return
+                        
+                        if index < 1 or index > len(tests):
+                            self.send_response(404)
+                            return
+
+                        test = tests[index - 1]
+                        test_descr = str(index) + (", group %s" % test.get_group() if test.get_group() != None else "")
+                        test_gen = ":manual {}".format(test.get_path()) if test.is_manual() else test.get_cmd()
+                        
+                        self.send_response(200)
+                        self.end_headers()
+                        
+                        write("""
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+table {
+  max-width: 1000px;
+  padding: 4px;
+}
+td#testno {
+  width: 4%%;
+}
+td#input, td#output {
+  width: 42%%;
+}
+.data {
+  font-family: mono;
+  vertical-align: top;
+  padding: 4px;
+}
+.data_text {
+}
+</style>
+</head>
+<body>
+<h2>Test %s, %s</h2>
+
+<div style="margin-bottom: 7px">Test generated with: <span class="data">%s</span></div>
+
+<table>
+<tr><td class="data">
+%s
+</td>
+</tr>
+</table>
+</body>
+</html>
+""" % (test_descr, parts[2], test_gen, shortly(os.path.join("work", "tests", "%03d%s" % (index, ".a" if parts[2] == "output" else "")), limit=-1)))
+                            
+                        return
+                self.send_response(404)
+        
+        server = http.server.HTTPServer(("localhost", 8128), Handler)
+        print("please connect to http://localhost:8128")
+        server.serve_forever()
+if __name__ == "__main__":
+    main()
