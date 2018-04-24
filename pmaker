@@ -70,13 +70,19 @@ class Problem:
         self.tests = None
         os.makedirs("work", exist_ok=True)
         
-    def call_cmd(self, cmd, cwd=None, text=True, nocache=False):
-        print("running: {}".format(cmd))
+    def call_cmd(self, cmd, cwd=None, text=True, nocache=False, input_data=None):
+        print("running: {}".format(cmd), " +input" if input_data else "")
         
         if cwd == None:
             cwd = self.home
-        
-        return subprocess.check_output(cmd, cwd=cwd, universal_newlines=text)
+
+        if input_data:
+            with tempfile.NamedTemporaryFile(prefix="infile_", dir=os.path.join("work", "temp"), mode="w+") as tmp:
+                tmp.write(input_data)
+                tmp.seek(0)
+                return subprocess.check_output(cmd, cwd=cwd, universal_newlines=text, stdin=tmp.file)
+        else:
+            return subprocess.check_output(cmd, cwd=cwd, universal_newlines=text)
 
     def compile(self, fl):
         if fl in self.compile_cache:
@@ -98,7 +104,7 @@ class Problem:
         txt = self.call_cmd("./{}".format(self.script))
         self.tests = []
 
-        cur_group = ""
+        cur_group = None
         for line in txt.split("\n"):
             line = line.strip()
             if line == "" or line.startswith("#"):
@@ -136,15 +142,18 @@ class Problem:
                 with open(os.path.join("tests.manual", test.get_path()), "r") as f:
                     output = f.read()
             else:
-                cmd = test.get_cmd()
-                
-                gen_name = os.path.join("source", cmd.split()[0])
-                if not gen_name.endswith(".cpp"):
-                    gen_name = gen_name + ".cpp"
-                generator = self.compile(gen_name)
-                
-                output = self.call_cmd([generator] + cmd.split()[1:])
+                for part in test.get_cmd().split("|"):
+                    sub = part.split()
+                    if len(sub) == 0:
+                        raise RuntimeError("invalid command")
 
+                    gen_name = sub[0]
+                    if not gen_name.endswith(".cpp"):
+                        gen_name = gen_name + ".cpp"
+    
+                    generator = self.compile(os.path.join("source",gen_name))
+                    output = self.call_cmd([generator] + sub[1:], input_data=output)
+                
             os.makedirs(os.path.join("work", "tests"), exist_ok=True)
             with open(os.path.join("work", "tests", "%03d" % index), "w") as f:
                 f.write(output)
@@ -204,6 +213,9 @@ def main():
         for sol in solutions:
             prob.compile(os.path.join("solutions", sol))
 
+        if not prob.checker:
+            error("fatal: checker is not available")
+            
         os.makedirs(os.path.join("work", "temp"), exist_ok=True)
         def judge(solution, test):
             input_name = os.path.join("work", "tests", "%03d" % test)
@@ -325,15 +337,24 @@ td {
                 def write(s):
                     self.wfile.write(bytes(s, "utf-8"))
                     
-                def shortly(path, limit=1024):
+                def shortly(path, limit=1024, linelimit=10):
                     try:
                         with open(path, "r") as f:
                             s = f.read(limit)
-                            s = html.escape(s)
+
+                            trail = False
                             
                             if len(s) == limit:
+                                trail = True
+
+                            lines = s.split("\n")
+                            if linelimit != -1 and len(lines) > linelimit:
+                                s = "\n".join(lines[0:linelimit])
+                                trail = True
+
+                            if trail:
                                 s += "..."
-                            return "<span class=\"data_text\">" + s.replace("\n","<br>") + "<span class=\"data_text\">"
+                            return "<span class=\"data_text\">" + html.escape(s).replace("\n","<br>") + "<span class=\"data_text\">"
                     except:
                         (_, ex, _) = sys.exc_info()
                         return "<span style=\"color:red\">failed to read: %s</span>" % (str(ex))
@@ -462,7 +483,7 @@ td#input, td#output {
 </table>
 </body>
 </html>
-""" % (test_descr, parts[2], test_gen, shortly(os.path.join("work", "tests", "%03d%s" % (index, ".a" if parts[2] == "output" else "")), limit=-1)))
+""" % (test_descr, parts[2], test_gen, shortly(os.path.join("work", "tests", "%03d%s" % (index, ".a" if parts[2] == "output" else "")), limit=-1, linelimit=-1)))
                             
                         return
                 self.send_response(404)
