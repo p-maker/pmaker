@@ -491,5 +491,4 @@ td#input, td#output {
         server = http.server.HTTPServer(("localhost", 8128), Handler)
         print("please connect to http://localhost:8128")
         server.serve_forever()
-if __name__ == "__main__":
-    main()
+
