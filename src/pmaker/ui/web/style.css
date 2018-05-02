@@ -1,0 +1,26 @@
+table.collapsed {
+  border-collapse: collapse;
+  padding: 4px;
+}
+
+td {
+    padding: 4px;
+}
+
+table.limited {
+  max-width: 1000px;
+}
+
+td#testview_testno {
+  width: 4%;
+}
+
+td#testview_input, td#testview_output {
+  width: 42%;
+}
+
+.data_container {
+  font-family: mono;
+  vertical-align: top;
+  padding: 4px;
+}

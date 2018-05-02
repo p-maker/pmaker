@@ -7,6 +7,9 @@ from concurrent.futures import ThreadPoolExecutor as Pool
 def error(msg):
     print(msg)
     sys.exit(1)
+
+class NotUpdatedError(Exception):
+    pass
     
 class Test:
     def __init__(self, manual, path=None, cmd=None, group=""):
@@ -24,19 +27,70 @@ class Test:
 
     def get_path(self):
         return self.path
+
+    def get_display_cmd(self):
+        if self.is_manual():
+            return ":manual {}".format(self.get_path())
+        else:
+            return self.get_cmd()
     
     def get_cmd(self):
         return self.cmd
 
     def get_group(self):
         return self.group
+
+class IndexedTest:
+    def __init__(self, prob, test, index):
+        self._prob = prob
+        self._test = test
+        self._index = index
+        
+        if type(self._index) is not int or self._index <= 0 or self._index >= 1000:
+            raise ValueError("Bad test index")
+
+    def test(self):
+        return self._test
     
+    def index(self):
+        return self._index
+
+    def prob(self):
+        return self._prob
+    
+    def index_str(self):
+        return "%03d" % self.index()
+
+    def get_group(self):
+        return self.test().get_group()
+
+    def get_path(self, obj):
+        """
+        Get path to the test
+
+        Keyword arguments:
+        obj --- Either "input" or "output"
+        """
+
+        if obj not in ["input", "output"]:
+            raise ValueError()
+        
+        suffix = "" if obj == "input" else ".a"
+        
+        return self.prob().relative("work", "tests", self.index_str() + suffix)
+        
+    def get_display_cmd(self):
+        return self.test().get_display_cmd()
+
 class Problem:
+    def relative(self, *args):
+        return os.path.join(self.home, *args)
+    
     def __init__(self, home):
         self.home = home
         
         parser = configparser.ConfigParser(delimiters=('=',), comment_prefixes=('#',))
-        with open(os.path.join(self.home, "problem.cfg"), "r") as f:
+        with open(self.relative("problem.cfg"), "r") as f:
             parser.readfp(f)
 
         self.source_dir    = parser.get("files", "source_dir", fallback="source")
@@ -124,6 +178,23 @@ class Problem:
 
         return self.tests
 
+    def get_test_by_index(self, index):
+        """
+        Returns test or None
+        
+        Keyword arguments:
+        index: test index as int
+        """
+
+        test_list = self.get_tests(noupdate=True)
+        if 1 <= index <= len(test_list):
+            return test_list[index - 1]
+        return None
+    
+    def get_tests(self, noupdate=False):
+        lst = self.get_test_list()
+        return [IndexedTest(self, lst[i], i + 1) for i in range(len(lst))]
+        
     def gen_tests(self):
         print("generating tests")
         
@@ -328,167 +399,9 @@ td {
         server = http.server.HTTPServer(("localhost", 8128), Handler)
         print("please connect to http://localhost:8128")
         server.serve_forever()
-    elif cmd == "view-tests":
-        tests = prob.get_test_list()
+    elif cmd == "view-tests" or cmd == "testview" or cmd == "test-view":
+        from pmaker.ui.web.web import WebUI
         
-        import http.server
-        class Handler(http.server.BaseHTTPRequestHandler):
-            def do_GET(self):
-                def write(s):
-                    self.wfile.write(bytes(s, "utf-8"))
-                    
-                def shortly(path, limit=1024, linelimit=10):
-                    try:
-                        with open(path, "r") as f:
-                            s = f.read(limit)
-
-                            trail = False
-                            
-                            if len(s) == limit:
-                                trail = True
-
-                            lines = s.split("\n")
-                            if linelimit != -1 and len(lines) > linelimit:
-                                s = "\n".join(lines[0:linelimit])
-                                trail = True
-
-                            if trail:
-                                s += "..."
-                            return "<span class=\"data_text\">" + html.escape(s).replace("\n","<br>") + "<span class=\"data_text\">"
-                    except:
-                        (_, ex, _) = sys.exc_info()
-                        return "<span style=\"color:red\">failed to read: %s</span>" % (str(ex))
-                    
-                    
-                if self.path == '/':
-                    self.send_response(200)
-                    
-                    self.send_header('Content-type','text/html')
-                    self.end_headers()
-                             
-                    write("""
-<!DOCTYPE html>
-<html>
-<head>
-<style>
-table {
-  border-collapse: collapse;
-  padding: 4px;
-}
-td#testno {
-  width: 5%;
-  padding: 8px;
-  font-weight: bold;
-}
-td#input, td#output {
-  width: 47.5%;
-  padding: 8px;
-  font-weight: bold;
-}
-td.data {
-  font-family: mono;
-  vertical-align: top;
-  padding: 4px;
-}
-.data_text {
-}
-</style>
-<script>
-function open_test(test, type) {
-  location = "/test_view/" + test + "/" + type;
-}
-</script>
-</head>
-<body>
-<table border>
-<tr><td id="testno">Test No</td><td id="input">Input</td> <td id="output">Output</td>
-""")
-
-                    for (test, index) in zip(tests, range(1, 1001)):
-                        write("<tr>")
-                        if test.get_group() != None:
-                            write("<td>Test {} ({})</td>".format(index, test.get_group()))
-                        else:
-                            write("<td>Test {}</td>".format(index))
-                        
-                        write("<td class=\"data\" onclick=\"open_test({}, {})\">".format("'" + str(index) + "'", "'input'"))
-                        write(shortly(os.path.join("work", "tests", "%03d" % index)))
-                        write("</td>")
-                        
-                        write("<td class=\"data\" onclick=\"open_test({}, {})\">".format("'" + str(index) + "'", "'output'"))
-                        write(shortly(os.path.join("work", "tests", "%03d.a" % index)))
-                        write("</td>")
-
-                        write("</tr>")
-                          
-                    write("""
-</table>
-</html>
-""")
-                else:
-                    parts = self.path.split("/")[1:]
-                    if len(parts) == 3 and parts[0] == "test_view" and parts[2] in ["input", "output"]:
-                        index = None
-                        try:
-                            index = int(parts[1])
-                        except:
-                            self.send_response(404)
-                            return
-                        
-                        if index < 1 or index > len(tests):
-                            self.send_response(404)
-                            return
-
-                        test = tests[index - 1]
-                        test_descr = str(index) + (", group %s" % test.get_group() if test.get_group() != None else "")
-                        test_gen = ":manual {}".format(test.get_path()) if test.is_manual() else test.get_cmd()
-                        
-                        self.send_response(200)
-                        self.end_headers()
-                        
-                        write("""
-<!DOCTYPE html>
-<html>
-<head>
-<style>
-table {
-  max-width: 1000px;
-  padding: 4px;
-}
-td#testno {
-  width: 4%%;
-}
-td#input, td#output {
-  width: 42%%;
-}
-.data {
-  font-family: mono;
-  vertical-align: top;
-  padding: 4px;
-}
-.data_text {
-}
-</style>
-</head>
-<body>
-<h2>Test %s, %s</h2>
-
-<div style="margin-bottom: 7px">Test generated with: <span class="data">%s</span></div>
-
-<table>
-<tr><td class="data">
-%s
-</td>
-</tr>
-</table>
-</body>
-</html>
-""" % (test_descr, parts[2], test_gen, shortly(os.path.join("work", "tests", "%03d%s" % (index, ".a" if parts[2] == "output" else "")), limit=-1, linelimit=-1)))
-                            
-                        return
-                self.send_response(404)
-        
-        server = http.server.HTTPServer(("localhost", 8128), Handler)
-        print("please connect to http://localhost:8128")
-        server.serve_forever()
-
+        ui = WebUI(prob)
+        ui.mode_testview()
+        ui.start()

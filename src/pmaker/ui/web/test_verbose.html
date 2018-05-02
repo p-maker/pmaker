@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title> pmaker &mdash; test view :: test {{test.index()}}, {{part}} </title>
+    <link href="/static/style.css" type="text/css" rel="stylesheet">
+  </head>
+<body>
+<h2>Test {{test.index()}}, {{part}}</h2>
+
+<div style="margin-bottom: 7px">Test generated with: <span class="data">{{test.get_display_cmd()}}</span></div>
+
+<table>
+<tr><td class="data">
+{{shortly(test.get_path(part), limit=-1, linelimit=-1)}}
+</td>
+</tr>
+</table>
+</body>
+</html>
