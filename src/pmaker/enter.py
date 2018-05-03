@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 import sys, os, os.path, configparser, subprocess, shutil, tempfile, time, html
 
 from concurrent.futures import ThreadPoolExecutor as Pool
@@ -273,6 +271,11 @@ def main():
     
     if (cmd == "tests" or cmd == None):
         prob.gen_tests()
+    if cmd == "tests2":
+        from pmaker.judge import new_judge
+        with new_judge() as judge:
+            pass
+            #prob.gen_tests_new(judge)
     elif cmd == "invoke":
         solutions = sys.argv[2:]
         test_list = prob.get_test_list()

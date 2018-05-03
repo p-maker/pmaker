@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name = "pmaker",
-    setup_requires = ['setuptools_scm', 'jinja2'],
+    setup_requires = ['setuptools_scm', 'jinja2', 'python_version>="3.5"'],
     use_scm_version = {"local_scheme": "dirty-tag"},
 
     packages = find_packages('src'),
