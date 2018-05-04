@@ -186,7 +186,7 @@ class Problem:
 
         test_list = self.get_tests(noupdate=True)
         if 1 <= index <= len(test_list):
-            return test_list[index - 1]
+            return IndexedTest(self, test_list[index - 1], index)
         return None
     
     def get_tests(self, noupdate=False):
@@ -250,7 +250,101 @@ class Problem:
                     raise RuntimeError("Failed to validate tests")            
                 else:
                     print("test %-3d: OK" % index)
+    
+    def compile_new(self, fl, judge):
+        if fl in self.compile_cache:
+            return self.compile_cache[fl]
+        else:
+            os.makedirs(os.path.dirname(os.path.join("work", "compiled", fl)), exist_ok=True)
+            
+            limits = judge.new_limits()
+            limits.set_proclimit(4)
+            limits.set_timelimit(30 * 1000)
+            limits.set_timelimit_wall(45 * 1000)
+            limits.set_memorylimit(256 * 1000)
+            
+            with judge.new_job_helper("compile.g++") as jh:
+                jh.set_limits(limits)
 
+                jh.run(fl)
+                jh.wait()
+
+                print(jh.job.result())
+                if not jh.is_ok():
+                    print("FAIL: ", jh.get_failure_reason())
+
+                    print("")
+                    print("[stdout]")
+                    print(jh.read_stdout())
+                    print("[stderr]")
+                    print(jh.read_stderr())
+                    
+                    raise RuntimeError("CE")
+                jh.fetch(os.path.join("work", "compiled", fl))
+
+            self.compile_cache[fl] = os.path.join("work", "compiled", fl)
+            return os.path.join("work", "compiled", fl)
+
+                    
+    def gen_tests_new(self, judge):
+        print("generating tests [beta]")
+        
+        if self.checker:
+            self.compile_new(self.checker, judge)
+        
+        tests = self.get_test_list()
+        if len(tests) >= 1000:
+            raise RuntimeError("too much tests")
+
+        if os.path.exists(os.path.join("work", "tests")):
+            shutil.rmtree(os.path.join("work", "tests"))
+        for (test, index) in zip(tests, range(1, 1000)):
+            output = None
+            if test.is_manual():
+                with open(os.path.join("tests.manual", test.get_path()), "r") as f:
+                    output = f.read()
+            else:
+                for part in test.get_cmd().split("|"):
+                    sub = part.split()
+                    if len(sub) == 0:
+                        raise RuntimeError("invalid command")
+
+                    gen_name = sub[0]
+                    if not gen_name.endswith(".cpp"):
+                        gen_name = gen_name + ".cpp"
+    
+                    generator = self.compile_new(os.path.join("source",gen_name), judge)
+                    output = self.call_cmd([generator] + sub[1:], input_data=output)
+                
+            os.makedirs(os.path.join("work", "tests"), exist_ok=True)
+            with open(os.path.join("work", "tests", "%03d" % index), "w") as f:
+                f.write(output)
+
+        if self.model:
+            self.compile(os.path.join(self.solutions_dir, self.model))
+            for (_, index) in zip(tests, range(1, 1001)):
+                with open(os.path.join("work", "tests", "%03d" % index), "rb") as inp:
+                    with open(os.path.join("work", "tests", "%03d.a" % index), "wb") as out:
+                        subprocess.check_call([os.path.join("work", "compiled", "solutions", self.model)], stdin=inp, stdout=out)
+
+        if not self.validator:
+            print("Validation skipped since there is no validator")
+        else:
+            self.compile_new(self.validator, judge)
+            print("validating tests...")
+            for (test, index) in zip(tests, range(1, 1001)):
+                group_info = ["--group", test.get_group()] if test.get_group() else []
+
+                with open(os.path.join("work", "tests", "%03d" % index)) as test_file:
+                    responce = subprocess.run([os.path.join("work", "compiled", self.validator)] + group_info, stdin=test_file, stdout=subprocess.PIPE, universal_newlines=True)
+
+                if responce.returncode != 0:
+                    print("test %-3d: FAIL, validator returned %d code" % index % responce.returncode)
+                    raise RuntimeError("Failed to validate tests")            
+                else:
+                    print("test %-3d: OK" % index)
+
+                    
                     
 def lookup_problem(base):
     while True:
@@ -274,8 +368,27 @@ def main():
     if cmd == "tests2":
         from pmaker.judge import new_judge
         with new_judge() as judge:
-            pass
-            #prob.gen_tests_new(judge)
+            prob.gen_tests_new(judge)
+    elif cmd == "invoke2":
+        solutions = sys.argv[2:]
+        test_list = prob.get_test_list()
+        test_indices = [i + 1 for i in range(len(test_list))]
+
+        from pmaker.judge import new_judge
+        from pmaker.invokation import new_invokation
+        from pmaker.ui.web.web import WebUI
+        import threading
+        
+        with new_judge() as judge:
+            invokation = new_invokation(judge, prob, solutions, test_indices)
+            ithread = threading.Thread(target=invokation.start)
+            ithread.start()
+            
+            ui = WebUI(prob)
+            ui.mode_invokation(invokation)
+            ui.start()
+            
+            ithread.join()
     elif cmd == "invoke":
         solutions = sys.argv[2:]
         test_list = prob.get_test_list()

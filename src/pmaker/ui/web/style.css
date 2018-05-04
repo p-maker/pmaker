@@ -24,3 +24,49 @@ td#testview_input, td#testview_output {
   vertical-align: top;
   padding: 4px;
 }
+
+td.invokation_cell_OK span.iverdict {
+    color: green;
+}
+
+td.invokation_cell_RUNNING {
+    background-color: #DDFF62;
+}
+
+td.invokation_cell_CHECKING {
+    background-color: #CDFF1A;
+}
+
+td.invokation_cell_COMPILING span.iverdict {
+    color: #7AA6FF;
+}
+
+td.invokation_cell_TL span.iverdict {
+    color: #910046;
+}
+
+td.invokation_cell_RE span.iverdict {
+    color: #9E1500;
+}
+
+td.invokation_cell_ML span.iverdict {
+    color: #9E1500;
+}
+
+td.invokation_cell_RE span.iverdict {
+    color: #9E1500;
+}
+
+td.invokation_cell_WA span.iverdict {
+    color: #FF2807;
+}
+
+td.invokation_cell_PE span.iverdict {
+    color: #FF2807;
+}
+
+span.invokation_stat {
+    font-size: 50%;
+}
+
+

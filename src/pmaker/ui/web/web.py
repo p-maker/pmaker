@@ -13,7 +13,8 @@ class WebUI:
         self.prob = prob
         self.default = "/dashboard"
         self.template_cache = dict()
-
+        self.the_invokation = None
+        
         webui = self
         
         class WebHandler(http.server.BaseHTTPRequestHandler):
@@ -46,7 +47,12 @@ class WebUI:
                     return "<span style=\"data_error\">failed to read: {}</span>".format(ex)
 
             def get_template_namespace(self):
-                return {"shortly": WebHandler.get_file_preview, "escape": html.escape}
+                import builtins
+                mp = builtins.__dict__
+                mp["shortly"] = WebHandler.get_file_preview
+                mp["escape"]  = html.escape
+                
+                return mp
                 
             def redirect(self, new_url, code=302):
                 self.send_response(code)
@@ -105,8 +111,19 @@ class WebUI:
                         self.send_404()
                         return
 
+                if parts == ["invokation"] and webui.the_invokation:
+                    solutions     = webui.the_invokation.get_solutions()
+                    test_indices  = webui.the_invokation.get_tests()
+
+                    def render_extras(i, j):
+                        if webui.the_invokation.descriptors[i][j].state == 3:
+                            (tm, mem) = webui.the_invokation.descriptors[i][j].get_rusage()
+                            return ' <span class=invokation_stat">(%.1f sec, %.1f mb)</span>' % (tm / 1000, mem / 1000)
+                        return ""
                     
-                    
+                    self.render("invokation.html", prob=webui.prob, invokation=webui.the_invokation, solutions=solutions, test_indices=test_indices, render_extras=render_extras, **self.get_template_namespace())
+                    return
+                
                 self.send_404()
         
         self.server  = http.server.HTTPServer(("localhost", self.port), WebHandler)
@@ -118,8 +135,9 @@ class WebUI:
     def mode_invokation_list(self):
         self.default = "/invokation"
         
-    def mode_invokation(self, invokation_id):
-        self.default = "/invokation/{}".format(invokation_id)
+    def mode_invokation(self, invokation):
+        self.the_invokation = invokation
+        self.default = "/invokation"
     
     def start(self):                
         print("Please connect to http://localhost:{}".format(self.port))
