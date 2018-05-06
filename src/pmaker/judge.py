@@ -33,8 +33,8 @@ class IsolatedJobEnvironment:
 class JobResult(enum.Enum):
     OK = 0
     TL = 1
-    TL_SOFT = 2
-    RE = 3
+    RE = 2
+    SG = 3
     ML = 4
     FL = 5
 
@@ -46,13 +46,13 @@ class JobResult(enum.Enum):
     
     def ok(self):
         return self == JobResult.OK
-    def complete(self):
-        return self in [JobResult.OK, JobResult.TL_SOFT]
-    
+
+    def ok_or_re(self):
+        return self in [JobResult.OK, JobResult.RE]
+
 class SimpleJobLimits:
     def __init__(self):
         self.timelimit      = None
-        self.timelimit_hard = None
         self.timelimit_wall = None
         self.memorylimit    = None
         self.proclimit      = 1
@@ -65,17 +65,6 @@ class SimpleJobLimits:
         tm, time in milliseconds, as integer.
         """
         self.timelimit = tm
-
-    def set_timelimit_hard(self, tm):
-        """
-        Sets hard limit on a job
-        This way job will be reported as TL'ed, but can still be completed
-
-        Parameters:
-        tm, time in milliseconds, as integer.
-        """
-
-        self.timelimit_hard = tm
 
     def set_timelimit_wall(self, tm):
         """
@@ -131,7 +120,14 @@ class IsolatedJob:
         self._cv       = threading.Condition(lock=self._lock)
 
         self._workdir  = None
+        self._quite    = False
+        
+        self._exitcode = None
+        self._exitsig  = None
 
+    def set_quite(self):
+        self.quite = True
+    
     def _init(self, box_id):
         subprocess.check_call(["isolate", "--cleanup", "--cg", "--box-id={}".format(box_id)], timeout=10)
         self._workdir = subprocess.check_output(["isolate", "--init", "--cg", "--box-id={}".format(box_id)], timeout=10, universal_newlines=True).strip() + "/box"
@@ -160,6 +156,9 @@ class IsolatedJob:
                 self._exitcode  = int(value)
                 if self._exitcode == 0:
                     the_result = JobResult.OK
+            if key == "exitsig":
+                self._exitsig   = value
+                the_result = JobResult.SG
 
         if the_result == None:
             raise ValueError("Result not provided, responce was:\n" + isolate_meta)
@@ -187,18 +186,12 @@ class IsolatedJob:
                 isolate_head.append("--processes={}".format(self._limits.proclimit))
                 
             TL  = self._limits.timelimit
-            HTL = self._limits.timelimit_hard
             WTL = self._limits.timelimit_wall
-            if HTL and not TL:
-                TL = HTL
-
             def make_time(tm):
                 return "%d.%03d" % (tm // 1000, tm % 1000)
             
             if TL:
                 isolate_head.append("--time={}".format(make_time(TL)))
-            if HTL and HTL != TL:
-                isolate_head.append("--extra-time={}".format(make_time(HTL - TL)))
             if WTL:
                 isolate_head.append("--wall-time={}".format(make_time(WTL)))
 
@@ -216,8 +209,10 @@ class IsolatedJob:
         isolate_head.append("--stderr={}".format("_files/stderr"))
         
         cmd = isolate_head + isolate_mid + isolate_tail
-        print(cmd)
-        print(" ".join(cmd))
+        
+        if not self._quite:
+            print(cmd)
+        
         res = subprocess.run(cmd, stdout=subprocess.PIPE, universal_newlines=True)
         
         if res.returncode not in [0, 1]:
@@ -291,6 +286,10 @@ class IsolatedJob:
         self.wait()
         return self._wallusage
 
+    def exit_code(self):
+        self.wait()
+        return self._exitcode
+    
     def failure_reason(self):
         self.wait()
         return self._failure_reason
@@ -318,10 +317,11 @@ class IsolatedJob:
         """
         Releases job and destroys all result
         """
-        self.wait()
-        self._clean(self._box_id)
-        self._judge._returnid(self._box_id)
-        delattr(self, "_box_id")
+        if hasattr(self, "_box_id"):
+            self.wait()
+            self._clean(self._box_id)
+            self._judge._returnid(self._box_id)
+            delattr(self, "_box_id")
 
     def __lt__(self, other):
         return self.__time < other.__time

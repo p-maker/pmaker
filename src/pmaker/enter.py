@@ -38,6 +38,9 @@ class Test:
     def get_group(self):
         return self.group
 
+    def has_group(self):
+        return self.get_group() != None
+
 class IndexedTest:
     def __init__(self, prob, test, index):
         self._prob = prob
@@ -62,6 +65,9 @@ class IndexedTest:
     def get_group(self):
         return self.test().get_group()
 
+    def has_group(self):
+        return self.test().has_group()
+    
     def get_path(self, obj):
         """
         Get path to the test
@@ -192,7 +198,21 @@ class Problem:
     def get_tests(self, noupdate=False):
         lst = self.get_test_list()
         return [IndexedTest(self, lst[i], i + 1) for i in range(len(lst))]
-        
+
+    def parse_exit_code(self, code):
+        from pmaker.invokation import InvokationStatus
+
+        db = {0: InvokationStatus.OK,
+              1: InvokationStatus.WA,
+              2: InvokationStatus.PE,
+              3: InvokationStatus.CF,
+              4: InvokationStatus.PE, # testlib calls it "dirt", we call it "pe".
+        }
+
+        if code in db:
+            return db[code]
+        return InvokationStatus.CF # assume it is check failed anyway.        
+    
     def gen_tests(self):
         print("generating tests")
         
@@ -369,27 +389,42 @@ def main():
         from pmaker.judge import new_judge
         with new_judge() as judge:
             prob.gen_tests_new(judge)
-    elif cmd == "invoke2":
+    elif cmd == "invokation-list":
+        from pmaker.invokation_manager import new_invokation_manager
+        from pmaker.ui.web.web import WebUI
+
+        imanager = new_invokation_manager(prob, prob.relative("work", "invokations"))
+        
+        ui = WebUI(prob)
+        ui.mode_invokation_list(imanager)
+        ui.start()
+    elif cmd == "invoke":
         solutions = sys.argv[2:]
         test_list = prob.get_test_list()
         test_indices = [i + 1 for i in range(len(test_list))]
 
+        if solutions == ["@all"]:
+            solutions = os.listdir(prob.relative("solutions"))
+            solutions.sort()
+        
         from pmaker.judge import new_judge
-        from pmaker.invokation import new_invokation
+        from pmaker.invokation_manager import new_invokation_manager
         from pmaker.ui.web.web import WebUI
         import threading
+
+        imanager = new_invokation_manager(prob, prob.relative("work", "invokations"))
         
         with new_judge() as judge:
-            invokation = new_invokation(judge, prob, solutions, test_indices)
+            uid, invokation = imanager.new_invokation(judge, solutions, test_indices)
             ithread = threading.Thread(target=invokation.start)
             ithread.start()
             
             ui = WebUI(prob)
-            ui.mode_invokation(invokation)
+            ui.mode_invokation(uid, imanager)
             ui.start()
             
             ithread.join()
-    elif cmd == "invoke":
+    elif cmd == "invoke-old":
         solutions = sys.argv[2:]
         test_list = prob.get_test_list()
         timelimit = prob.timelimit

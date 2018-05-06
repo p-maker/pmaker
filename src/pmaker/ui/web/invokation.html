@@ -17,10 +17,16 @@
     
     {% for i in range(len(test_indices)) %}
     <tr>
-      <td> {{ test_indices[i] }} </td>
+      <td>
+        {% if prob.get_test_by_index(test_indices[i]).has_group() %}
+          {{ test_indices[i] }} ({{ prob.get_test_by_index(test_indices[i]).get_group()}})
+        {% else %}
+          {{ test_indices[i] }}
+        {% endif %}
+      </td>
       
       {% for j in range(len(solutions)) %}
-      <td class="invokation_cell_{{invokation.get_result(j, i).name}}"> <span class="iverdict">{{invokation.get_result(j, i).name}}</span> {{render_extras(j, i)}} </td>
+      {{ render_cell(j, i) }}
       {% endfor %}
     </tr>
     {% endfor %}

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link href="/static/style.css" type="text/css" rel="stylesheet">
+  <title> pmaker &mdash; invokation list </title>
+
+</head>
+<body>
+  <table border class="collapsed">
+    <tr>
+      <td> Invokation No </td>
+      <td> Solutions </td>
+      <td> Status </td>
+    </tr>
+    
+    {% for uid in invokations %}
+    <tr>
+      <td><a href="/invokation/{{uid}}">{{uid}}</a></td>
+      <td>{{get_solutions(imanager.get_invokation(uid))}}</td>
+      {% if active(uid) %}
+      <td>Active</td>
+      {% else %}
+      <td>Archived</td>
+      {% endif %}
+    </tr>
+    {% endfor %}
+  </table>
+</body>

@@ -1,39 +1,91 @@
 from pmaker.enter import Problem
-from enum import Enum
-import uuid
+from enum import IntEnum
+import json
 import os, os.path
 
-class InvokationStatus(Enum):
-    WAITING   = -4
-    COMPILING = -3
-    CE        = -2
-    CHECKING  = -1
-    PENDING   =  0
-    RUNNING   =  1
-    OK        =  2
-    RE        =  3
-    WA        =  4
-    PE        =  5
-    ML        =  6
-    TL        =  7
-    TL_HARD   =  8
-    WA_TL     =  9
-    FL        =  10
+class InvokationStatus(IntEnum):
+    INCOMPLETE = -9
+    WAITING    = -8
+    COMPILING  = -7
+    CE         = -6
+    CHECKING   = -5
+    PENDING    = -4
+    RUNNING    = -3
+    CF         = -2 # ignore other details, checker has failed.
+    FL         = -1 # different from CF, CF is for checker fail, FL is for system fail.
+    
+    OK        =  0
+    RE        =  1
+    WA        =  2
+    PE        =  3
+    ML        =  4
+
+    TL_OK     =  5
+    TL_RE     =  6
+    TL_WA     =  7
+    TL_PE     =  8
+    TL_ML     =  9  # well, whatever.
+    
+    TL        =  10 # TL (HARD edition)
+
+    def make_tl(self, ignore_fail=False):
+        if InvokationStatus.OK <= self <= InvokationStatus.ML:
+            return InvokationStatus(self.value + 5)
+
+        if ignore_fail:
+            return self
+        raise ValueError("Can't add TL to the verdict")
+
+    def is_tl(self):
+        return InvokationStatus.TL_OK <= self <= InvokationStatus.TL
+    
+    def undo_tl(self, ignore_fail=False):
+        if InvokationStatus.TL_OK <= self <= InvokationStatus.TL_ML:
+            return InvokationStatus(self.value - 5)
+        if self.value == InvokationStatus.TL:
+            return self
+        if ignore_fail:
+            return self
+
+        raise ValueError("Can't remove TL from verdict")
+
 
 class InvokeDesc:
-    def __init__(self, prob, judge, limits, solution, test_no):
-        self.prob     = prob
-        self.judge    = judge
-        self.limits   = limits
-        self.solution = solution
-        self.test_no  = test_no
-        self.the_test = self.prob.get_test_by_index(self.test_no)
-        self.state    = 0 # not started.
+    def __init__(self, invokation, limits, solution, test_no, export):
+        self.invokation = invokation
+        self.prob       = invokation.prob
+        self.judge      = invokation.judge
+        self.limits     = limits
+        self.solution   = solution
+        self.test_no    = test_no
+        self.export     = export
+        self.the_test   = self.prob.get_test_by_index(self.test_no)
+        self.state      = 0 # not started.
         
         self.totaltime = None
         self.totalmem  = None
+
+    def redump(self):
+        try:
+            with open(self.invokation.relative("results", self.export), "w") as fp:
+                db = {}
+                if self.totaltime:
+                    db["time_usage"] = self.totaltime
+                if self.totalmem:
+                    db["mem_usage"] = self.totalmem
+                if self.state == 3:
+                    db["result"]    = self.result.name
+                json.dump(db, fp)
+        except:
+            pass
+            
+    def start(self, is_ce=False):
+        if is_ce:
+            self.result = InvokationStatus.CE
+            self.state = 3
+            self.redump()
+            return
         
-    def start(self):
         jobhelper = self.judge.new_job_helper("invoke.g++")
         jobhelper.set_limits(self.limits)
         jobhelper.run(self.prob.relative("work", "compiled", "solutions", self.solution), in_file=self.the_test.get_path("input"), c_handler=self.invoke_done)
@@ -48,22 +100,25 @@ class InvokeDesc:
         self.totaltime = self.jobhelper.get_timeusage()
         self.totalmem  = self.jobhelper.get_memusage()
         
-        if rs in [JobResult.TL, JobResult.TL_SOFT]:
+        if rs in [JobResult.TL]:
             self.result = InvokationStatus.TL
             self.state = 3 # complete
             self.jobhelper.release()
+            self.redump()
             return
         
-        if rs in [JobResult.RE]:
+        if rs in [JobResult.RE, JobResult.SG]:
             self.result = InvokationStatus.RE
             self.state = 3 # complete
             self.jobhelper.release()
+            self.redump()
             return
 
         if rs in [JobResult.ML]:
             self.result = InvokationStatus.ML
             self.state = 3 # complete
             self.jobhelper.release()
+            self.redump()            
             return
 
         if rs in [JobResult.FL]:
@@ -71,8 +126,10 @@ class InvokeDesc:
             print(self.jobhelper.get_failure_reason())
             self.state = 3 # complete
             self.jobhelper.release()
+            self.redump()
             return
 
+        # TODO TODO TODO
         with open("/tmp/" + self.solution + "_" + str(self.test_no), "w") as fp:
             fp.write(self.jobhelper.read_stdout())
             self.jobhelper.release()
@@ -89,6 +146,7 @@ class InvokeDesc:
 
         self.jobhelper = jobhelper
         self.state = 2 # checking
+        self.redump()
     def check_done(self):
         rs = self.jobhelper.result()
         from pmaker.judge import JobResult
@@ -99,10 +157,16 @@ class InvokeDesc:
             if rs == JobResult.OK:
                 self.result = InvokationStatus.OK
             else:
-                self.result = InvokationStatus.WA
+                code = self.jobhelper.exit_code()
+                self.result = self.prob.parse_exit_code(code)
+        
         self.state = 3
+        self.redump()
         self.jobhelper.release()
-    
+
+    def is_final(self):
+        return self.state == 3
+        
     def get_status(self):
         if self.state == 0:
             return InvokationStatus.PENDING
@@ -113,27 +177,47 @@ class InvokeDesc:
                 return InvokationStatus.PENDING
         if self.state == 2:
             return InvokationStatus.CHECKING
-        return self.result
+        
+        if self.totaltime >= self.invokation.timelimit:
+            return self.result.make_tl(ignore_fail=True)
+        else:
+            return self.result
     
     def get_rusage(self):
         return (self.totaltime, self.totalmem)
     
 class Invokation:
-    def __init__(self, judge, prob, solutions, test_indices, uid, path):
+    def relative(self, *args):
+        return os.path.join(self.workdir, *args)
+    
+    def __init__(self, judge, prob, solutions, test_indices, uid, path, TL, ML):
         self.judge        = judge
         self.prob         = prob
         self.solutions    = solutions
         self.test_indices = test_indices
+
+        self.workdir = path
+
+        with open(self.relative("meta.json"), "w") as fp:
+            json.dump({"solutions": self.solutions,
+                       "test_indices": self.test_indices,
+                       "timelimit": TL,
+                       "memorylimit": ML},
+                      fp)
+
+        os.makedirs(self.relative("results"))
+        
+        self.timelimit   = TL
+        self.memorylimit = ML
         
         self.compilation_jobs    = [None for i in range(len(solutions))]
 
         limits = self.judge.new_limits()
-        limits.set_timelimit(1000 * self.prob.timelimit)
-        limits.set_timelimit_hard(2 * 1000 * self.prob.timelimit)
-        limits.set_timelimit_wall(4 * 1000 * self.prob.timelimit)
-        limits.set_memorylimit(256 * 1000)
+        limits.set_timelimit(2 * TL)
+        limits.set_timelimit_wall(3 * TL)
+        limits.set_memorylimit(ML)
         
-        self.descriptors        = [[InvokeDesc(prob, judge, limits, solutions[i], test_indices[j]) for j in range(len(test_indices))] for i in range(len(solutions))]
+        self.descriptors        = [[InvokeDesc(self, limits, solutions[i], test_indices[j], export="{}_{}".format(i, j)) for j in range(len(test_indices))] for i in range(len(solutions))]
         
     def start(self):
         for i in range(len(self.solutions)):
@@ -155,12 +239,12 @@ class Invokation:
             self.compilation_jobs[i].release()
 
         # TODO: fetch compilation log.
-
+        
         for j in range(len(self.test_indices)):
             for i in range(len(self.solutions)):
-                if self.compilation_jobs[i].is_ok():
-                    self.descriptors[i][j].start()
-
+                is_ce = not self.compilation_jobs[i].is_ok()
+                self.descriptors[i][j].start(is_ce = is_ce)
+                    
     def get_solutions(self):
         return self.solutions
 
@@ -178,8 +262,5 @@ class Invokation:
         else:
             return InvokationStatus.WAITING
 
-def new_invokation(judge, prob, solutions, test_indices):
-    uid = str(uuid.uuid4())
-    path = prob.relative("work", "invokations", uid)
-    return Invokation(judge, prob, solutions, test_indices, uid, path)
-
+    def get_descriptor(self, sol, tst):
+        return self.descriptors[sol][tst]

@@ -39,6 +39,9 @@ class JobHelperCommon:
 
     def result(self):
         return self.job.result()
+
+    def exit_code(self):
+        return self.job.exit_code()
     
     def get_failure_reason(self):
         return self.job.failure_reason()
