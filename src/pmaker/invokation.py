@@ -129,8 +129,7 @@ class InvokeDesc:
             self.redump()
             return
 
-        # TODO TODO TODO
-        with open("/tmp/" + self.solution + "_" + str(self.test_no), "w") as fp:
+        with open(self.invokation.relative("output", self.export), "w") as fp:
             fp.write(self.jobhelper.read_stdout())
             self.jobhelper.release()
 
@@ -140,7 +139,7 @@ class InvokeDesc:
         jobhelper.set_priority(30)
         jobhelper.add_file(self.the_test.get_path("input"), "/input")
         jobhelper.add_file(self.the_test.get_path("output"), "/correct")
-        jobhelper.add_file("/tmp/" + self.solution + "_" + str(self.test_no), "/output")
+        jobhelper.add_file(self.invokation.relative("output", self.export), "/output")
 
         jobhelper.run(self.prob.relative("work", "compiled", "check.cpp"), prog_args=["input", "output", "correct"], c_handler=self.check_done)
 
@@ -206,6 +205,7 @@ class Invokation:
                       fp)
 
         os.makedirs(self.relative("results"))
+        os.makedirs(self.relative("output"))
         
         self.timelimit   = TL
         self.memorylimit = ML
