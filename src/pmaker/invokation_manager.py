@@ -111,7 +111,7 @@ class InvokationManager:
     def new_invokation(self, judge, solutions, test_indices):
         if self.prob.timelimit == None:
             raise ValueError("Time limit is not provided")
-        if self.prob.timelimit == None:
+        if self.prob.memlimit == None:
             raise ValueError("Memory limit is not provided")
         
         lst = self.list_invokations()
