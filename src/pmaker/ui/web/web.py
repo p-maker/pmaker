@@ -193,15 +193,53 @@ class WebUI:
 
                         internal = ''
                         if len(res.name) >= 3:
-                            internal = '<span class="iverdict iverdict_long">{}</span>'.format(res.name)
+                            internal = '<span class="iverdict iverdict_long iverdict_{}">{}</span>'.format(res.name, res.name)
                         else:
-                            internal = '<span class="iverdict">{}</span>'.format(res.name)
+                            internal = '<span class="iverdict iverdict_{}">{}</span>'.format(res.name, res.name)
                         extras = ""
                         if res != InvokationStatus.INCOMPLETE:
                             extras   = render_extras(i, j, hard_tl=hard_tl, tl_plus=tl_plus)
                         return '<td onclick="open_cell({},{})" class="invokation_cell_{}">{} {}</td>'.format(i, j, res.name, internal, extras)
+
+                    def render_stats():
+                        from collections import OrderedDict
+                        from pmaker.invokation import InvokationStatus
+                        
+                        data = OrderedDict()
+                        class SimpleStruct:
+                            def __init__(self):
+                                self.time = 0
+                                self.mem  = 0
+                                self.verdicts = []                        
+                        
+                        def do_update(group, sol, tm, mem, verdict):
+                            if not group in data:
+                                data[group] = [SimpleStruct() for _ in range(len(solutions))]
+                            if tm != None:
+                                data[group][sol].time = max(tm, data[group][sol].time)
+                            if mem != None:
+                                data[group][sol].mem  = max(mem, data[group][sol].mem)
+                                
+                            if verdict in [InvokationStatus.RUNNING, InvokationStatus.CHECKING]:
+                                verdict = InvokationStatus.PENDING
+                            if verdict.name != "RUNNING" and verdict.name != "CHECKING" and not verdict in data[group][sol].verdicts:
+                                data[group][sol].verdicts.append(verdict)
+
+                        for i in range(len(solutions)):
+                            for j in range(len(test_indices)):
+                                result = the_invokation.get_result(i, j)
+                                (tm, mem) = the_invokation.get_descriptor(i, j).get_rusage()
+                                do_update("", i, tm, mem, result)
+                                if webui.prob.get_test_by_index(test_indices[j]).has_group():
+                                    do_update(webui.prob.get_test_by_index(test_indices[j]).get_group(), i, tm, mem, result)
+
+                        for (key, value) in data.items():
+                            for i in range(len(solutions)):
+                                value[i].verdicts.sort()
+                        return data.items()
                     
-                    self.render("invokation.html", prob=webui.prob, invokation=the_invokation, solutions=solutions, test_indices=test_indices, uid=uid, render_cell=render_cell, **self.get_template_namespace())
+                    from pmaker.invokation import InvokationStatus
+                    self.render("invokation.html", prob=webui.prob, invokation=the_invokation, solutions=solutions, test_indices=test_indices, uid=uid, render_stats=render_stats, render_cell=render_cell, InvokationStatus=InvokationStatus, **self.get_template_namespace())
                     return
 
                 if len(parts) == 4 and parts[0] == "invokation" and parts[2] == "compilation" and webui.imanager != None:

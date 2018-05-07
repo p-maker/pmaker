@@ -11,7 +11,7 @@
   <p><a class="black_link" href="/invokation/{{uid}}/source/{{sol_id}}">Solution source</a></p>
 
   <h3> Main </h3>
-  <p> Verdict: <span class="iverdict">{{invokation.get_result(sol_id, test_id).name}}</span></p>
+  <p> Verdict: <span class="iverdict iverdict_inline iverdict_{{invokation.get_result(sol_id, test_id).name}}">{{invokation.get_result(sol_id, test_id).name}}</span></p>
   
   {% if invokation.get_descriptor(sol_id, test_id).get_rusage()[0] != None %}
   <p> Time usage: {{"%.03f" % (invokation.get_descriptor(sol_id, test_id).get_rusage()[0] / 1000)}} sec </p>

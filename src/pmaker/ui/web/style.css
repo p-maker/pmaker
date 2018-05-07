@@ -29,12 +29,13 @@ td.data {
     max-width: 800px;
 }
 
-span.data_empty {
-    font-style: italic;
+td.center_notice {
+    text-align: center;
+    font-weight: bolder;
 }
 
-td.invokation_cell_OK span.iverdict {
-    color: green;
+span.data_empty {
+    font-style: italic;
 }
 
 td.invokation_cell_RUNNING {
@@ -49,32 +50,29 @@ td.invokation_cell_COMPILING span.iverdict {
     color: #7AA6FF;
 }
 
-td.invokation_cell_TL span.iverdict {
+td.invokation_cell_INCOMPLETE span.iverdict {
+    color: #8BDDEC;
+}
+
+
+span.iverdict_OK {
+    color: green;
+}
+
+span.iverdict_TL, span.iverdict_TL_OK {
     color: #910046;
 }
 
-td.invokation_cell_RE span.iverdict {
+span.iverdict_RE, span.iverdict_TL_RE, span.iverdict_ML, span.iverdict_ML {
     color: #9E1500;
 }
 
-td.invokation_cell_ML span.iverdict {
-    color: #9E1500;
-}
-
-td.invokation_cell_RE span.iverdict {
-    color: #9E1500;
-}
-
-td.invokation_cell_WA span.iverdict {
+span.iverdict_WA, span.iverdict_TL_WA {
     color: #FF2807;
 }
 
-td.invokation_cell_PE span.iverdict {
+span.iverdict_PE, span.iverdict.TL_PE {
     color: #FF2807;
-}
-
-td.invokation_cell_INCOMPLETE span.iverdict {
-    color: #8BDDEC;
 }
 
 span.invokation_stat {

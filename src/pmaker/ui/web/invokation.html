@@ -38,5 +38,46 @@
       {% endfor %}
     </tr>
     {% endfor %}
+    <tr><td class="center_notice" colspan="{{len(solutions) + 1}}">Group stats</td></tr>
+    <tr>
+      <td> Group </td>
+      {% for i in range(len(solutions)) %}
+      <td onclick="open_solution_window({{i}})"> {{ escape(solutions[i]) }} </td>
+      {% endfor %}
+    </tr>
+
+    {% for (group_name, line) in render_stats() %}
+    <tr>
+      <td rowspan="2">
+        {% if group_name == "" %}
+        <span style="font-style: italic">all</span>
+        {% else %}
+        group {{group_name}}
+        {% endif %}
+      </td>
+      
+      {% for j in range(len(solutions)) %}
+      <td><span class="invokation_stat">
+          {% if InvokationStatus.TL in line[j].verdicts %}
+          <span class="was_tl">inf</span>
+          {% else %}
+          {{ "%.1f" % (line[j].time / 1000) }} sec
+          {% endif %},
+          
+          {{ "%.0f" % (line[j].mem / 1000) }} mb</span></td>
+      {% endfor %}
+    </tr>
+    <tr>
+      {% for j in range(len(solutions)) %}
+      <td>
+        {% for verd in line[j].verdicts %}
+        <span class="iverdict iverdict_inline iverdict_{{verd.name}}">
+          {{verd.name}}
+        </span>
+        {% endfor %}
+      </td>
+      {% endfor %}
+    </tr>
+    {% endfor %}
   </table>
 </body>

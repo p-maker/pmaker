@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python3
 
 from setuptools import setup, find_packages
 from codecs import open
