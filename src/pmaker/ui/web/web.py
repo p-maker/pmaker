@@ -39,18 +39,22 @@ class WebUI:
                         if trail:
                             s += "..."
                     
-                        pre  = "<span class=\"data_text\">"
-                        post = "<span class=\"data_text\">"
+                        pre  = '<span class="data_text">'
+                        post = '<span class="data_text">'
+                        if s == "":
+                            return '<span class="data_text data_empty">(empty)</span>'
                         return pre + html.escape(s).replace("\n","<br>") + post
                 except:
                     (_, ex, _) = sys.exc_info()
                     return "<span style=\"data_error\">failed to read: {}</span>".format(ex)
 
             def get_template_namespace(self):
-                import builtins
+                import builtins, os, os.path
                 mp = builtins.__dict__
                 mp["shortly"] = WebHandler.get_file_preview
                 mp["escape"]  = html.escape
+
+                mp["exists"] = os.path.exists
                 
                 return mp
                 
@@ -74,6 +78,11 @@ class WebUI:
                 self.end_headers()
                 self.wfile.write(data)
 
+            def send_txt_data(self, data, code=200):
+                self.send_response(code)
+                self.end_headers()
+                self.write_string(data)
+                
             def send_404(self):
                 self.send_data(pkg_resources.resource_string(__name__, "404.html"), code=404)
             
@@ -131,12 +140,13 @@ class WebUI:
                     
                 if parts[:1] == ["invokation"] and len(parts) == 2 and webui.imanager != None:
                     the_invokation = None
+                    uid = None
                     try:
-                        the_invokation = webui.imanager.get_invokation(int(parts[1]))
+                        uid = int(parts[1])
+                        the_invokation = webui.imanager.get_invokation(uid)
                     except:
-                        raise
-                        #self.send_404()
-                        #return
+                        self.send_404()
+                        return
                     
                     if the_invokation == None:
                         self.send_404()
@@ -189,9 +199,104 @@ class WebUI:
                         extras = ""
                         if res != InvokationStatus.INCOMPLETE:
                             extras   = render_extras(i, j, hard_tl=hard_tl, tl_plus=tl_plus)
-                        return '<td class="invokation_cell_{}">{} {}</td>'.format(res.name, internal, extras)
+                        return '<td onclick="open_cell({},{})" class="invokation_cell_{}">{} {}</td>'.format(i, j, res.name, internal, extras)
                     
-                    self.render("invokation.html", prob=webui.prob, invokation=the_invokation, solutions=solutions, test_indices=test_indices, render_cell=render_cell, **self.get_template_namespace())
+                    self.render("invokation.html", prob=webui.prob, invokation=the_invokation, solutions=solutions, test_indices=test_indices, uid=uid, render_cell=render_cell, **self.get_template_namespace())
+                    return
+
+                if len(parts) == 4 and parts[0] == "invokation" and parts[2] == "compilation" and webui.imanager != None:
+                    the_invokation = None
+                    uid = None
+                    sol_id = None
+                    solution = None
+                    
+                    try:
+                        uid = int(parts[1])
+                        sol_id = int(parts[3])
+                        the_invokation = webui.imanager.get_invokation(uid)
+                        solution = the_invokation.get_solutions()[sol_id]
+                    except:
+                        self.send_404()
+                        return
+                    
+                    if the_invokation == None:
+                        self.send_404()
+                        return
+
+                    self.render("invokation_compilation.html", uid=uid, solution=solution, sol_id=sol_id, invokation=the_invokation, **self.get_template_namespace())
+                    return
+                
+                if len(parts) == 5 and parts[0] == "invokation" and parts[2] == "result" and webui.imanager != None:
+                    the_invokation = None
+                    uid      = None
+                    sol_id   = None
+                    test_id  = None
+                    test     = None
+                    the_test = None
+                    solution = None
+                    
+                    try:
+                        uid     = int(parts[1])
+                        sol_id  = int(parts[3])
+                        test_id = int(parts[4])
+                        the_invokation = webui.imanager.get_invokation(uid)
+                        
+                        solution = the_invokation.get_solutions()[sol_id]
+                        test     = the_invokation.get_tests()[test_id]
+                        the_test = webui.prob.get_test_by_index(test)
+                    except:
+                        self.send_404()
+                        return
+                    
+                    if the_invokation == None:
+                        self.send_404()
+                        return
+                    
+                    self.render("invokation_run.html", uid=uid, solution=solution, sol_id=sol_id, invokation=the_invokation, test_id=test_id, test=test, the_test=the_test, **self.get_template_namespace())
+                    return
+
+                if len(parts) == 4 and parts[0] == "invokation" and parts[2] == "source" and webui.imanager != None:
+                    the_invokation = None
+                    uid      = None
+                    sol_id   = None
+                    solution = None
+                    
+                    try:
+                        uid     = int(parts[1])
+                        sol_id  = int(parts[3])
+                        the_invokation = webui.imanager.get_invokation(uid)
+                        
+                        solution = the_invokation.get_solutions()[sol_id]
+                    except:
+                        self.send_404()
+                        return
+                    
+                    if the_invokation == None:
+                        self.send_404()
+                        return
+
+                    code = None
+                    try:
+                        with open(webui.prob.relative("solutions", solution), "r") as fp:
+                            code = fp.read()
+                    except:
+                        self.send_404()
+                        return
+
+                    try:
+                        import pygments, pygments.lexers, pygments.formatters, pygments.styles
+                    except:
+                        self.send_txt_data("To use viewer please install pygments", code=500)
+
+                    try:
+                        lexer     = pygments.lexers.get_lexer_by_name("c++")
+                        style     = pygments.styles.get_style_by_name("igor")
+                        formatter = pygments.formatters.get_formatter_by_name("html", style=style, full=True, linenos='table')
+                        res = pygments.highlight(code, lexer, formatter)
+                        self.send_txt_data(res, code=200)
+                    except Exception as ex:
+                        self.send_txt_data("There was error during highlighting", code=500)
+                        print(ex)
                     return
                 
                 self.send_404()

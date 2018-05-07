@@ -106,6 +106,7 @@ class Problem:
 
         self.model      = parser.get("main", "model_solution", fallback=None)
         self.timelimit  = parser.getfloat("main", "time_limit",    fallback=None)
+        self.memlimit  = parser.getfloat("main", "memory_limit",    fallback=None)
         
         if not self.validator:
             for validator in ["validator.cpp", "validate.cpp"]:

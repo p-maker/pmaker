@@ -311,7 +311,7 @@ class IsolatedJob:
         return os.path.join(self._workdir, "_files", "stdout")
 
     def get_stderr_path(self):
-        return os.path.join(self._workdir, "_files", "stdin")
+        return os.path.join(self._workdir, "_files", "stderr")
     
     def release(self):
         """

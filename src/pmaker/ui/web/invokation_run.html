@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link href="/static/style.css" type="text/css" rel="stylesheet">
+  <title> pmaker &mdash; invokation (result for {{solution}}, test {{test}}) </title>
+</head>
+<body>
+  <h2>Invokation result for {{solution}}, test {{test}}</h2>
+
+  <p><a class="black_link" href="/invokation/{{uid}}/compilation/{{sol_id}}">Compilation log</a></p>
+  <p><a class="black_link" href="/invokation/{{uid}}/source/{{sol_id}}">Solution source</a></p>
+
+  <h3> Main </h3>
+  <p> Verdict: <span class="iverdict">{{invokation.get_result(sol_id, test_id).name}}</span></p>
+  
+  {% if invokation.get_descriptor(sol_id, test_id).get_rusage()[0] != None %}
+  <p> Time usage: {{"%.03f" % (invokation.get_descriptor(sol_id, test_id).get_rusage()[0] / 1000)}} sec </p>
+  {% endif %}
+
+  {% if invokation.get_descriptor(sol_id, test_id).get_rusage()[1] != None %}
+  <p> Memory usage: {{"%.03f" % (invokation.get_descriptor(sol_id, test_id).get_rusage()[1] / 1000)}} mb </p>
+  {% endif %}
+
+  {% if exists(invokation.relative("output", "{}_{}_code").format(sol_id, test_id)) %}
+  <p> Solution exit code: {{shortly(invokation.relative("output", "{}_{}_code").format(sol_id, test_id), limit=-1, linelimit=-1)}} </p>
+  {% endif %}
+  
+  {% if exists(invokation.relative("output", "{}_{}_checkcode").format(sol_id, test_id)) %}
+  <p> Checker exit code: {{shortly(invokation.relative("output", "{}_{}_checkcode").format(sol_id, test_id), limit=-1, linelimit=-1)}} </p>
+  {% endif %}
+  
+  <h3> Test input </h3>
+
+  <table>
+    <tr><td class="data">
+        {{shortly(the_test.get_path("input"), limit=2048, linelimit=12)}}
+      </td>
+    </tr>
+  </table>
+
+  <h3> Correct output </h3>
+
+  <table>
+    <tr><td class="data">
+        {{shortly(the_test.get_path("output"), limit=2048, linelimit=12)}}
+      </td>
+    </tr>
+  </table>
+
+  
+  <h3> Run stdout </h3>
+
+  <table>
+    <tr><td class="data">
+        {% if exists(invokation.relative("output", "{}_{}").format(sol_id, test_id)) %}
+          {{shortly(invokation.relative("output", "{}_{}").format(sol_id, test_id), limit=2048, linelimit=12)}}
+        {% else %}
+          <span style="color: red">Data not available</span>
+        {% endif %}
+      </td>
+    </tr>
+  </table>
+
+  <h3> Run stderr </h3>
+
+  <table>
+    <tr><td class="data">
+        {% if exists(invokation.relative("output", "{}_{}_err").format(sol_id, test_id)) %}
+          {{shortly(invokation.relative("output", "{}_{}_err").format(sol_id, test_id), limit=2048, linelimit=12)}}
+        {% else %}
+          <span style="color: red">Data not available</span>
+        {% endif %}
+      </td>
+    </tr>
+  </table>
+
+  <h3> Checker comment (stderr) </h3>
+
+  <table>
+    <tr><td class="data">
+        {% if exists(invokation.relative("output", "{}_{}_check").format(sol_id, test_id)) %}
+          {{shortly(invokation.relative("output", "{}_{}_check").format(sol_id, test_id), limit=2048, linelimit=12)}}
+        {% else %}
+          <span style="color: red">Data not available</span>
+        {% endif %}
+      </td>
+    </tr>
+  </table>
+  
+</body>

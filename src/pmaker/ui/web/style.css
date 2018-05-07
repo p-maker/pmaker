@@ -25,6 +25,14 @@ td#testview_input, td#testview_output {
   padding: 4px;
 }
 
+td.data {
+    max-width: 800px;
+}
+
+span.data_empty {
+    font-style: italic;
+}
+
 td.invokation_cell_OK span.iverdict {
     color: green;
 }
@@ -65,6 +73,10 @@ td.invokation_cell_PE span.iverdict {
     color: #FF2807;
 }
 
+td.invokation_cell_INCOMPLETE span.iverdict {
+    color: #8BDDEC;
+}
+
 span.invokation_stat {
     font-size: 77%;
 }
@@ -77,6 +89,10 @@ span.iverdict_long {
     font-family: serif;
 }
 
+a.black_link {
+    color: black;
+    text-decoration: underline;
+}
 
 span.hard_tl {
     color: #330019;

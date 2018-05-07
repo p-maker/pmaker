@@ -4,6 +4,11 @@
   <link href="/static/style.css" type="text/css" rel="stylesheet">
   <title> pmaker &mdash; invokation list </title>
 
+  <script>
+    function open_invokation(id) {
+       location = "/invokation/" + id;
+    }
+  </script>
 </head>
 <body>
   <table border class="collapsed">
@@ -16,11 +21,11 @@
     {% for uid in invokations %}
     <tr>
       <td><a href="/invokation/{{uid}}">{{uid}}</a></td>
-      <td>{{get_solutions(imanager.get_invokation(uid))}}</td>
+      <td onclick="open_invokation({{uid}})">{{get_solutions(imanager.get_invokation(uid))}}</td>
       {% if active(uid) %}
-      <td>Active</td>
+      <td onclick="open_invokation({{uid}})">Active</td>
       {% else %}
-      <td>Archived</td>
+      <td onclick="open_invokation({{uid}})">Archived</td>
       {% endif %}
     </tr>
     {% endfor %}

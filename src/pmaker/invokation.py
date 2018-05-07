@@ -99,6 +99,14 @@ class InvokeDesc:
         
         self.totaltime = self.jobhelper.get_timeusage()
         self.totalmem  = self.jobhelper.get_memusage()
+
+        with open(self.invokation.relative("output", self.export), "w") as fp:
+            fp.write(self.jobhelper.read_stdout())
+        with open(self.invokation.relative("output", self.export + "_err"), "w") as fp:
+            fp.write(self.jobhelper.read_stderr())
+        if self.jobhelper.is_ok_or_re():
+            with open(self.invokation.relative("output", self.export + "_code"), "w") as fp:
+                fp.write(str(self.jobhelper.exit_code()))
         
         if rs in [JobResult.TL]:
             self.result = InvokationStatus.TL
@@ -128,10 +136,8 @@ class InvokeDesc:
             self.jobhelper.release()
             self.redump()
             return
-
-        with open(self.invokation.relative("output", self.export), "w") as fp:
-            fp.write(self.jobhelper.read_stdout())
-            self.jobhelper.release()
+                        
+        self.jobhelper.release()
 
         jobhelper = self.judge.new_job_helper("invoke.g++")
         jobhelper.set_limits(self.limits)
@@ -158,7 +164,20 @@ class InvokeDesc:
             else:
                 code = self.jobhelper.exit_code()
                 self.result = self.prob.parse_exit_code(code)
+
+        try:
+            with open(self.invokation.relative("output", self.export + "_check"), "w") as fp:
+                fp.write(self.jobhelper.read_stderr())
+        except:
+            raise
+        if rs.ok_or_re():
+            try:
+                with open(self.invokation.relative("output", self.export + "_checkcode"), "w") as fp:
+                    fp.write(str(self.jobhelper.exit_code()))
+            except:
+                pass
         
+                
         self.state = 3
         self.redump()
         self.jobhelper.release()
@@ -206,6 +225,7 @@ class Invokation:
 
         os.makedirs(self.relative("results"))
         os.makedirs(self.relative("output"))
+        os.makedirs(self.relative("compilations"))
         
         self.timelimit   = TL
         self.memorylimit = ML
@@ -234,12 +254,18 @@ class Invokation:
 
         for i in range(len(self.solutions)):
             self.compilation_jobs[i].wait()
+            if self.compilation_jobs[i].is_ok_or_re():
+                with open(self.relative("compilations", "{}_out".format(i)), "w") as fp:
+                    fp.write(self.compilation_jobs[i].read_stdout())
+                with open(self.relative("compilations", "{}_err".format(i)), "w") as fp:
+                    fp.write(self.compilation_jobs[i].read_stderr())
+                with open(self.relative("compilations", "{}_code".format(i)), "w") as fp:
+                    fp.write(str(self.compilation_jobs[i].exit_code()))
+            
             if self.compilation_jobs[i].is_ok():
                 self.compilation_jobs[i].fetch(self.prob.relative("work", "compiled", "solutions", self.solutions[i]))
             self.compilation_jobs[i].release()
 
-        # TODO: fetch compilation log.
-        
         for j in range(len(self.test_indices)):
             for i in range(len(self.solutions)):
                 is_ce = not self.compilation_jobs[i].is_ok()

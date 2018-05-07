@@ -37,6 +37,9 @@ class JobHelperCommon:
     def is_ok(self):
         return self.result().ok()
 
+    def is_ok_or_re(self):
+        return self.result().ok_or_re()
+    
     def result(self):
         return self.job.result()
 

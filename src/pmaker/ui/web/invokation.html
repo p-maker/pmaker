@@ -4,14 +4,22 @@
   <link href="/static/style.css" type="text/css" rel="stylesheet">
   <title> pmaker &mdash; invokation </title>
 
+  <script>
+    function open_solution_window(sol_id) {
+        location = "/invokation/{{uid}}/compilation/" + sol_id;
+    }
+    function open_cell(sol_id, run_id) {
+        location = "/invokation/{{uid}}/result/" + sol_id + "/" + run_id;
+    }
+  </script>
 </head>
 <body>
   <table border class="collapsed">
     <tr>
       <td>test</td>
       
-      {% for sol in solutions %}
-      <td> {{ escape(sol) }} </td>
+      {% for i in range(len(solutions)) %}
+      <td onclick="open_solution_window({{i}})"> {{ escape(solutions[i]) }} </td>
       {% endfor %}
     </tr>
     
