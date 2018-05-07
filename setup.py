@@ -1,7 +1,7 @@
-#!/usr/bin/python3
+#!/usr/bin/python2
 
 from setuptools import setup, find_packages
-
+from codecs import open
 import os, os.path
 
 with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'README.md'), encoding='utf-8') as f:
