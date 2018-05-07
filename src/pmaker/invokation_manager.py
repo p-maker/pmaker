@@ -58,10 +58,10 @@ class ArchivedInvokation:
         self.info = [[None for i in range(len(self.get_tests()))] for j in range(len(self.get_solutions()))]
 
         for i in range(len(self.get_solutions())):
-            for j in range(len(self.get_solutions())):
+            for j in range(len(self.get_tests())):
                 try:
                     with open(self.relative("results", "{}_{}".format(i, j)), "r") as fp:
-                      self.info[i][j] = json.load(fp)
+                        self.info[i][j] = json.load(fp)
                 except:
                     pass
 
