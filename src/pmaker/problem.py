@@ -457,7 +457,7 @@ class Problem(ProblemBase):
         if self._checker == None:
             for checker in ["checker.cpp", "check.cpp"]:
                 if self.exists(checker):
-                    self._checker = self.relative(checker)
+                    self._checker = checker
                     break
 
         for script in ["script", "script.txt", "script.py", "script.sh"]:
@@ -719,7 +719,10 @@ class Problem(ProblemBase):
                 gen = gen + ".cpp"
             iprint("Compiling source/" + gen)
             self.compile("source", gen)
-
+    
+        iprint("Compiling checker")
+        self.compile(self._checker)
+        shutil.copyfile(self.compilation_result(self._checker), self.relative("work", "compiled", "check.cpp"))
         iprint("Generating tests")
         inputs = []
         

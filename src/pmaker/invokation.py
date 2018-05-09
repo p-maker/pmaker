@@ -51,11 +51,12 @@ class InvokationStatus(IntEnum):
 
 
 class InvokeDesc:
-    def __init__(self, invokation, limits, solution, test_no, export):
+    def __init__(self, invokation, limits, sol_no, solution, test_no, export):
         self.invokation = invokation
         self.prob       = invokation.prob
         self.judge      = invokation.judge
         self.limits     = limits
+        self.sol_no     = sol_no
         self.solution   = solution
         self.test_no    = test_no
         self.export     = export
@@ -88,7 +89,7 @@ class InvokeDesc:
         
         jobhelper = self.judge.new_job_helper("invoke.g++")
         jobhelper.set_limits(self.limits)
-        jobhelper.run(self.prob.relative("work", "compiled", "solutions", self.solution), in_file=self.the_test.get_path("input"), c_handler=self.invoke_done)
+        jobhelper.run(self.invokation.relative("compilations", "{}".format(self.sol_no)), in_file=self.the_test.get_path("input"), c_handler=self.invoke_done)
 
         self.jobhelper = jobhelper
         self.state = 1 # testing
@@ -237,7 +238,7 @@ class Invokation:
         limits.set_timelimit_wall(3 * TL)
         limits.set_memorylimit(ML)
         
-        self.descriptors        = [[InvokeDesc(self, limits, solutions[i], test_indices[j], export="{}_{}".format(i, j)) for j in range(len(test_indices))] for i in range(len(solutions))]
+        self.descriptors        = [[InvokeDesc(self, limits, i, solutions[i], test_indices[j], export="{}_{}".format(i, j)) for j in range(len(test_indices))] for i in range(len(solutions))]
         
     def start(self):
         for i in range(len(self.solutions)):
@@ -263,7 +264,7 @@ class Invokation:
                     fp.write(str(self.compilation_jobs[i].exit_code()))
             
             if self.compilation_jobs[i].is_ok():
-                self.compilation_jobs[i].fetch(self.prob.relative("work", "compiled", "solutions", self.solutions[i]))
+                self.compilation_jobs[i].fetch(self.relative("compilations", "{}".format(i)))
             self.compilation_jobs[i].release()
 
         for j in range(len(self.test_indices)):
