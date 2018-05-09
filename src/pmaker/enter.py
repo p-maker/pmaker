@@ -384,10 +384,17 @@ def main():
     
     if (cmd == "tests" or cmd == None):
         prob.gen_tests()
-    if cmd == "tests2":
+    elif cmd == "tests2":
         from pmaker.judge import new_judge
         with new_judge() as judge:
             prob.gen_tests_new(judge)
+    elif cmd == "tests3":
+        import pmaker.problem
+        xprob = pmaker.problem.lookup_problem()
+        from pmaker.judge import new_judge
+        with new_judge() as judge:
+            xprob.set_judge(judge)
+            xprob.update_tests()
     elif cmd == "invokation-list":
         from pmaker.invokation_manager import new_invokation_manager
         from pmaker.ui.web.web import WebUI

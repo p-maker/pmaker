@@ -45,7 +45,9 @@ class JobHelperCommon:
 
     def exit_code(self):
         return self.job.exit_code()
-    
+
+    def failure_reason(self):
+        return self.job.failure_reason()
     def get_failure_reason(self):
         return self.job.failure_reason()
     
@@ -86,12 +88,30 @@ class JobHelperInvokation(JobHelperCommon):
     def __init__(self, judge):
         super().__init__(judge)
 
-    def run(self, source, in_file=None, prog_args=None, c_handler=None, c_args=None):
+    def run(self, source, in_file=None, prog_args=[], c_handler=None, c_args=None):
         env = self.env
         env.add_exe_file(source, "/prog")
-        if prog_args == None:
-            prog_args = []
         self.job = self.judge.new_job(env, self.limits, *(["./prog"] + prog_args), in_file=in_file, c_handler=c_handler, c_args=c_args, priority=self.priority)
 
 
+class JobHelperPyInvokation(JobHelperCommon):
+    def __init__(self, judge):
+        super().__init__(judge)
+
+    def run(self, source, in_file=None, prog_args=[], c_handler=None, c_args=None):
+        env = self.env
+        env.add_file(source, "/prog.py")
         
+        self.job = self.judge.new_job(env, self.limits, *(["/usr/bin/python3", "./prog.py"] + prog_args), in_file=in_file, c_handler=c_handler, c_args=c_args, priority=self.priority)
+
+
+class JobHelperBashInvokation(JobHelperCommon):
+    def __init__(self, judge):
+        super().__init__(judge)
+
+    def run(self, source, in_file=None, prog_args=[], c_handler=None, c_args=None):
+        env = self.env
+        env.add_file(source, "/prog.sh")
+        
+        self.job = self.judge.new_job(env, self.limits, *(["/bin/bash", "./prog.sh"] + prog_args), in_file=in_file, c_handler=c_handler, c_args=c_args, priority=self.priority)
+

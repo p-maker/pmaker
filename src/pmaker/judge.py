@@ -50,6 +50,9 @@ class JobResult(enum.Enum):
     def ok_or_re(self):
         return self in [JobResult.OK, JobResult.RE]
 
+    def is_fail(self):
+        return self == JobResult.FL
+
 class SimpleJobLimits:
     def __init__(self):
         self.timelimit      = None
@@ -398,12 +401,15 @@ class IsolatedJudge:
         return SimpleJobLimits()
 
     def new_job_helper(self, target):
+        import pmaker.jobhelper
         if target == "compile.g++":
-            import pmaker.jobhelper
             return pmaker.jobhelper.JobHelperCompilation(self)
         if target == "invoke.g++":
-            import pmaker.jobhelper
             return pmaker.jobhelper.JobHelperInvokation(self)
+        if target == "invoke.py3":
+            return pmaker.jobhelper.JobHelperPyInvokation(self)
+        if target == "invoke.bash":
+            return pmaker.jobhelper.JobHelperBashInvokation(self)
         
         raise ValueError("Unsupported job helper type")
 
