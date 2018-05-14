@@ -11,7 +11,7 @@ setup(
     name = "pmaker",
     description = "Toolkit for creating problems for programming competitions",
     long_description = long_description,
-    long_description_content_type='text/markdown',
+    long_description_content_type='text/x-rst',
     url = "https://github.com/p-maker/pmaker",
     author = "Dmitry Sayutin",
 
