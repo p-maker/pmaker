@@ -192,7 +192,7 @@ class ScriptInterpreter:
             if len(parts) == 0:
                 continue
 
-            if parts[0] == "#":
+            if parts[0][0] == "#":
                 continue
             
             if parts[0] == ":manual":
@@ -625,7 +625,7 @@ class Problem(ProblemBase):
             fp.write(jh.read_stdout())
 
         jh.release()
-        deps = [self.compilation_result(cmd[0])]
+        deps = [self.compilation_result("source" cmd[0])]
         if in_file != None:
             deps.append(in_file)
         return deps
