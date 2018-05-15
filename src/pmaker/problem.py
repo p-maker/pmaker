@@ -675,7 +675,7 @@ class Problem(ProblemBase):
             fp.write(jh.read_stdout())
 
         jh.release()
-        deps = [self.relative(self.compilation_result(self._model_solution)), in_file]
+        deps = [self.relative(self.compilation_result("solutions", self._model_solution)), in_file]
         return deps
 
     
