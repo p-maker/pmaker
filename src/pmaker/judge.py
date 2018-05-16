@@ -95,8 +95,20 @@ class SimpleJobLimits:
         mem: memory limit in kb's, as integer.
         """
 
-        self.memory_limit = mem
+        self.memorylimit = mem
 
+    def get_timelimit(self):
+        return self.timelimit
+    
+    def get_timelimit_wall(self):
+        return self.timelimit_wall
+
+    def get_proclimit(self):
+        return self.proclimit
+    
+    def get_memorylimit(self):
+        return self.memorylimit
+    
 class IsolatedJob:
     def __init__(self, judge, env, limits, *command, in_file=None, c_handler=None, c_args=None):
         from time import time

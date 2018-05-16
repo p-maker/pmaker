@@ -22,6 +22,16 @@ class ProblemJobNotFoundError(ProblemError):
 class ProblemNotUpdatedError(ProblemError):
     pass
 
+class ProblemCompilationFail(ProblemError):
+    def __init__(self, source, judge_result, exit_code, stderr):
+        self.source       = source
+        self.judge_result = judge_result
+        self.exit_code    = exit_code
+        self.stderr       = stderr
+
+    def __str__(self):
+        return "Compilation failed for {}\nJudge result: {}\nExit code: {}\nstderr:\n{}\n[END]\n".format(self.source, self.judge_result, self.exit_code, self.stderr)
+
 def lookup_problem(base=os.path.realpath("."), doraise=False):
     while True:
         if os.path.isfile(os.path.join(base, "problem.cfg")):
@@ -66,6 +76,10 @@ class Test:
     def _set_index(self, index):
         self.index = index
 
+    def get_display_cmd(self):
+        if self.is_manual():
+            return ":manual {}".format(self.get_manual_path())
+        return " | ".join(map(lambda x: " ".join(x), self.get_cmd_parts()))
     def export(self):
         """
         Returns object, acceptable for serializing with json
@@ -426,6 +440,13 @@ class ProblemBase:
         Convenience function for referrencing objects inside homedir
         """
         return os.path.exists(self.relative(*args))
+
+    def parse_millis(self, s):
+        pre,post = s.split('.', maxsplit=1)
+        if len(post) > 3:
+            raise ValueError("Bad millis specification")
+        post = post + '0' * (3 - len(post))
+        return 1000 * int(pre) + int(post)
     
 class Problem(ProblemBase):
     def __init__(self, homedir, judge=None):
@@ -438,8 +459,8 @@ class Problem(ProblemBase):
         self._judge          = judge
             
         self._model_solution = parser.get("main", "model_solution", fallback=None)
-        self._time_limit     = parser.get("main", "time_limit", fallback=None)
-        self._mem_limit      = parser.get("main", "memory_limit", fallback=None)
+        self._time_limit     = self.parse_millis(parser.get("main", "time_limit"))
+        self._mem_limit      = self.parse_millis(parser.get("main", "memory_limit"))
         self._validator      = None
         self._checker        = None
         self._script         = None
@@ -478,15 +499,17 @@ class Problem(ProblemBase):
 
     def get_generator_limits(self):
         limits = self._judge.new_limits()
-        limits.set_memorylimit(64 * 1000)
+        limits.set_memorylimit(256 * 1000)
         limits.set_timelimit(5 * 1000)
+        limits.set_timelimit_wall(10 * 1000)
         limits.set_proclimit(1)
         return limits
 
     def get_validation_limits(self):
         limits = self._judge.new_limits()
-        limits.set_memorylimit(64 * 1000)
+        limits.set_memorylimit(256 * 1000)
         limits.set_timelimit(5 * 1000)
+        limits.set_timelimit_wall(10 * 1000)
         limits.set_proclimit(1)
         return limits
 
@@ -494,6 +517,15 @@ class Problem(ProblemBase):
         limits = self._judge.new_limits()
         limits.set_memorylimit(256 * 1000)
         limits.set_timelimit(15 * 1000)
+        limits.set_timelimit_wall(30 * 1000)
+        limits.set_proclimit(1)
+        return limits
+
+    def get_problem_limits(self):
+        limits = self._judge.new_limits()
+        limits.set_memorylimit(self._mem_limit)
+        limits.set_timelimit(self._time_limit)
+        limits.set_timelimit_wall(2 * self._time_limit)
         limits.set_proclimit(1)
         return limits
     
@@ -589,8 +621,9 @@ class Problem(ProblemBase):
     def __do_compile(self, src, lang="g++"):
         jh = self._judge.new_job_helper("compile." + lang)
         limits = self._judge.new_limits()
-        limits.set_memorylimit(64 * 1000)
+        limits.set_memorylimit(256 * 1000)
         limits.set_timelimit(30 * 1000)
+        limits.set_timelimit_wall(30 * 1000)
         limits.set_proclimit(4)
 
         jh.set_limits(limits)
@@ -598,8 +631,9 @@ class Problem(ProblemBase):
         jh.wait()
 
         if not jh.result().ok():
+            err = ProblemCompilationFail(src, jh.result(), jh.exit_code(), jh.read_stderr())
             jh.release()
-            raise ProblemError("Failed to compile {}".format(src))
+            raise err
 
         os.makedirs(self.relative("work", "compiled"), exist_ok=True)
         jh.fetch(self.compile_result(*src))
@@ -811,4 +845,17 @@ class Problem(ProblemBase):
                     os.remove(self.relative("work", part))
                 elif os.path.isdir(self.relative("work", part)):
                     shutil.rmtree(self.relative("work", part))
-        
+
+    def parse_exit_code(self, code):
+        from pmaker.invokation import InvokationStatus
+
+        db = {0: InvokationStatus.OK,
+              1: InvokationStatus.WA,
+              2: InvokationStatus.PE,
+              3: InvokationStatus.CF,
+              4: InvokationStatus.PE, # testlib calls it "dirt", we call it "pe".
+        }
+
+        if code in db:
+            return db[code]
+        return InvokationStatus.CF # assume it is check failed anyway.        

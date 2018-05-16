@@ -1,4 +1,3 @@
-from pmaker.enter import Problem
 from enum import IntEnum
 import json
 import os, os.path
@@ -60,7 +59,7 @@ class InvokeDesc:
         self.solution   = solution
         self.test_no    = test_no
         self.export     = export
-        self.the_test   = self.prob.get_test_by_index(self.test_no)
+        self.the_test   = self.prob.get_testset().by_index(self.test_no)
         self.state      = 0 # not started.
         
         self.totaltime = None
@@ -89,7 +88,10 @@ class InvokeDesc:
         
         jobhelper = self.judge.new_job_helper("invoke.g++")
         jobhelper.set_limits(self.limits)
-        jobhelper.run(self.invokation.relative("compilations", "{}".format(self.sol_no)), in_file=self.the_test.get_path("input"), c_handler=self.invoke_done)
+
+        the_input = self.prob.relative("work", "_data", self.prob.get_test_input_data(self.the_test))
+        
+        jobhelper.run(self.invokation.relative("compilations", "{}".format(self.sol_no)), in_file=the_input, c_handler=self.invoke_done)
 
         self.jobhelper = jobhelper
         self.state = 1 # testing
@@ -143,9 +145,12 @@ class InvokeDesc:
         jobhelper = self.judge.new_job_helper("invoke.g++")
         jobhelper.set_limits(self.limits)
 
+        the_input = self.prob.relative("work", "_data", self.prob.get_test_input_data(self.the_test))
+        the_output = self.prob.relative("work", "_data", self.prob.get_test_output_data(self.the_test))
+        
         jobhelper.set_priority(30)
-        jobhelper.add_file(self.the_test.get_path("input"), "/input")
-        jobhelper.add_file(self.the_test.get_path("output"), "/correct")
+        jobhelper.add_file(the_input, "/input")
+        jobhelper.add_file(the_output, "/correct")
         jobhelper.add_file(self.invokation.relative("output", self.export), "/output")
 
         jobhelper.run(self.prob.relative("work", "compiled", "check.cpp"), prog_args=["input", "output", "correct"], c_handler=self.check_done)

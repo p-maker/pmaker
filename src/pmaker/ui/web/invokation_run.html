@@ -33,7 +33,7 @@
 
   <table>
     <tr><td class="data">
-        {{shortly(the_test.get_path("input"), limit=2048, linelimit=12)}}
+        {{ shortly(prob.relative("work", "_data", prob.get_test_input_data(the_test)), limit=2048, linelimit=12) }}
       </td>
     </tr>
   </table>
@@ -42,7 +42,7 @@
 
   <table>
     <tr><td class="data">
-        {{shortly(the_test.get_path("output"), limit=2048, linelimit=12)}}
+        {{ shortly(prob.relative("work", "_data", prob.get_test_output_data(the_test)), limit=2048, linelimit=12) }}
       </td>
     </tr>
   </table>

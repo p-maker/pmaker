@@ -5,7 +5,6 @@ import jinja2
 import pkg_resources
 
 import pmaker
-from pmaker.enter import NotUpdatedError
 
 class WebUI:
     def __init__(self, prob):
@@ -98,23 +97,19 @@ class WebUI:
                     self.send_data(pkg_resources.resource_string(__name__, "style.css"))
                     return
                 if parts == ["test_view"]:
-                    tests = None
-                    
-                    try:
-                        tests = webui.prob.get_tests(noupdate=True)
-                    except NotUpdatedError:
-                        pass
+                    tests = webui.prob.get_testset()
                     
                     self.render("test_view.html", prob=webui.prob, tests=tests, **self.get_template_namespace())
                     return
 
                 if parts[:2] == ["test_view", "show_test"] and len(parts) == 4 and parts[3] in ["input", "output"]:
                     try:
-                        test = webui.prob.get_test_by_index(int(parts[2]))
+                        test = webui.prob.get_testset().by_index(int(parts[2]), noraise=True)
                         if not test:
-                            raise ValueError()
+                            self.send_404()
+                            return
 
-                        self.render("test_verbose.html", prob=webui.prob, test=test, part=parts[3], **self.get_template_namespace())
+                        self.render("test_verbose.html", prob=webui.prob, test=test, test_no=parts[2], part=parts[3], **self.get_template_namespace())
                         return
                     except ValueError:
                         self.send_404()
@@ -230,8 +225,8 @@ class WebUI:
                                 result = the_invokation.get_result(i, j)
                                 (tm, mem) = the_invokation.get_descriptor(i, j).get_rusage()
                                 do_update("", i, tm, mem, result)
-                                if webui.prob.get_test_by_index(test_indices[j]).has_group():
-                                    do_update(webui.prob.get_test_by_index(test_indices[j]).get_group(), i, tm, mem, result)
+                                if webui.prob.get_testset().by_index(test_indices[j]).has_group():
+                                    do_update(webui.prob.get_testset().by_index(test_indices[j]).get_group(), i, tm, mem, result)
 
                         for (key, value) in data.items():
                             for i in range(len(solutions)):
@@ -281,7 +276,7 @@ class WebUI:
                         
                         solution = the_invokation.get_solutions()[sol_id]
                         test     = the_invokation.get_tests()[test_id]
-                        the_test = webui.prob.get_test_by_index(test)
+                        the_test = webui.prob.get_testset().by_index(test)
                     except:
                         self.send_404()
                         return
@@ -290,7 +285,7 @@ class WebUI:
                         self.send_404()
                         return
                     
-                    self.render("invokation_run.html", uid=uid, solution=solution, sol_id=sol_id, invokation=the_invokation, test_id=test_id, test=test, the_test=the_test, **self.get_template_namespace())
+                    self.render("invokation_run.html", prob=webui.prob, uid=uid, solution=solution, sol_id=sol_id, invokation=the_invokation, test_id=test_id, test=test, the_test=the_test, **self.get_template_namespace())
                     return
 
                 if len(parts) == 4 and parts[0] == "invokation" and parts[2] == "source" and webui.imanager != None:

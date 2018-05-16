@@ -109,18 +109,15 @@ class InvokationManager:
         return self.active.keys()
     
     def new_invokation(self, judge, solutions, test_indices):
-        if self.prob.timelimit == None:
-            raise ValueError("Time limit is not provided")
-        if self.prob.memlimit == None:
-            raise ValueError("Memory limit is not provided")
-        
+        timelim = self.prob.get_problem_limits().get_timelimit()
+        memlim  = self.prob.get_problem_limits().get_memorylimit()
         lst = self.list_invokations()
         
         uid  = 0 if len(lst) == 0 else max(lst) + 1
         path = os.path.join(self.homedir, str(uid))
         
         os.makedirs(path)
-        self.active[uid] = Invokation(judge, self.prob, solutions, test_indices, uid, path, self.prob.timelimit * 1000, self.prob.memlimit * 1000)
+        self.active[uid] = Invokation(judge, self.prob, solutions, test_indices, uid, path, timelim, memlim)
 
         return (uid, self.active[uid])
 

@@ -16,21 +16,21 @@
         <td id="testview_input">Input</td>
         <td id="testview_output">Output</td>
       </tr>
-      {% for test in tests %}
+      {% for index in range(1, tests.size() + 1) %}
       <tr>
-        <td> Test {{ test.index() }}
+        <td> Test {{ index }}
 
-          {% if test.get_group() != None %}
-          ({{escape(test.get_group())}})
+          {% if tests[index].get_group() != None %}
+          ({{escape(tests[index].get_group())}})
           {% endif %}
         </td>
 
-        <td class="data_container", onclick="open_test('{{test.index()}}', 'input')">
-          {{ shortly(prob.relative("work", "tests", test.index_str())) }}
+        <td class="data_container", onclick="open_test('{{index}}', 'input')">
+          {{ shortly(prob.relative("work", "_data", prob.get_test_input_data(tests[index]))) }}
         </td>
 
-        <td class="data_container", onclick="open_test('{{test.index()}}', 'output')">
-          {{ shortly(prob.relative("work", "tests", test.index_str() + ".a")) }}
+        <td class="data_container", onclick="open_test('{{index}}', 'output')">
+          {{ shortly(prob.relative("work", "_data", prob.get_test_input_data(tests[index]))) }}
         </td>
       </tr>
       {% endfor %}

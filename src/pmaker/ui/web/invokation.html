@@ -26,8 +26,8 @@
     {% for i in range(len(test_indices)) %}
     <tr>
       <td>
-        {% if prob.get_test_by_index(test_indices[i]).has_group() %}
-          {{ test_indices[i] }} ({{ prob.get_test_by_index(test_indices[i]).get_group()}})
+        {% if prob.get_testset().by_index(test_indices[i]).has_group() %}
+          {{ test_indices[i] }} ({{ prob.get_testset().by_index(test_indices[i]).get_group()}})
         {% else %}
           {{ test_indices[i] }}
         {% endif %}
