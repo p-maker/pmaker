@@ -22,12 +22,14 @@ class ProblemJobNotFoundError(ProblemError):
 class ProblemNotUpdatedError(ProblemError):
     pass
 
-def lookup_problem(base=os.path.realpath(".")):
+def lookup_problem(base=os.path.realpath("."), doraise=False):
     while True:
         if os.path.isfile(os.path.join(base, "problem.cfg")):
             return new_problem(base)
 
         if os.path.dirname(base) == base:
+            if doraise:
+                raise ProblemError("Problem not found error")
             return None
         
         base = os.path.dirname(base)
@@ -625,7 +627,7 @@ class Problem(ProblemBase):
             fp.write(jh.read_stdout())
 
         jh.release()
-        deps = [self.compilation_result("source" cmd[0])]
+        deps = [self.compilation_result("source", cmd[0])]
         if in_file != None:
             deps.append(in_file)
         return deps
@@ -765,7 +767,7 @@ class Problem(ProblemBase):
                 more = True
                 if len(bad) >= 10:
                     bad = bad[:10]
-                iprint("[W] There are some validation problems, tests " + ",".join(bad) + ("..." if more else ""))
+                iprint("[W] There are some validation problems, tests " + ",".join(map(str, bad)) + ("..." if more else ""))
                 iprint("[W] Use test-view for more details")
         else:
             iprint("Validation skipped since there is no validator")
