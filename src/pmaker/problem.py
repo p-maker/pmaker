@@ -512,7 +512,7 @@ class Problem(ProblemBase):
             return prev
 
     def get_test_output_data(self, test):
-        return "ans." + self.get_test_input_data(test)
+        return "ans." + self._job_cache.safe_id_from_string(self._model_solution) + "." + self._job_cache.safe_id_from_string(self.get_test_input_data(test))
     
     def get_validation(self, index):
         testset = self.get_testset(check_only=True)
@@ -543,7 +543,14 @@ class Problem(ProblemBase):
                 arg = arg.split(".", maxsplit=1)                
                 func = lambda: self.__do_validate(self._job_cache.string_from_id(arg[0]), arg[1])
             if cmd == "ans":
-                func = lambda: self.__do_gen_ans(arg)
+                sol, tst = arg.split(".", maxsplit=1)
+                sol = self._job_cache.string_from_id(sol)
+                tst = self._job_cache.string_from_id(tst)
+
+                if sol != self._model_solution:
+                    raise ValueError("Unsupported solution")
+                
+                func = lambda: self.__do_gen_ans(tst, job)
         
         return CacheableJob.wrap(func)
     
@@ -656,7 +663,7 @@ class Problem(ProblemBase):
         deps = [self.relative(self.compilation_result(self._validator)), in_file]
         return deps
 
-    def __do_gen_ans(self, test_path):
+    def __do_gen_ans(self, test_path, out_path):
         jh = self._judge.new_job_helper("invoke.g++")
         jh.set_limits(self.get_model_limits())
 
@@ -673,7 +680,7 @@ class Problem(ProblemBase):
             raise ProblemError("Failed to generate answer for: {}, reason: {}".format(test_path, reason))
         
         os.makedirs(self.relative("work", "_data"), exist_ok=True)
-        with open(self.relative("work", "_data", "ans.{}".format(test_path)), "w") as fp:
+        with open(self.relative("work", "_data", out_path), "w") as fp:
             fp.write(jh.read_stdout())
 
         jh.release()
@@ -776,8 +783,10 @@ class Problem(ProblemBase):
         iprint("Compiling jury solution")
         self.compile("solutions", self._model_solution)
         iprint("Generating jury answers")
+        answers = []
         for i in range(len(tests)):
-            self._job_cache.run_job("ans.{}".format(inputs[i]))
+            self._job_cache.run_job("ans.{}.{}".format(self._job_cache.safe_id_from_string(self._model_solution), self._job_cache.safe_id_from_string(inputs[i])))
+            answers.append("ans.{}.{}".format(self._job_cache.safe_id_from_string(self._model_solution), self._job_cache.safe_id_from_string(inputs[i])))
 
         iprint("Posting tests")
         if os.path.exists(self.relative("work", "tests")):
@@ -789,7 +798,7 @@ class Problem(ProblemBase):
             test_path = self.relative("work", "tests", "%.03d" % (i + 1))
             
             shutil.copyfile(self.relative("work", "_data", inputs[i]), test_path)
-            shutil.copyfile(self.relative("work", "_data", "ans.{}".format(inputs[i])), test_path + ".a")
+            shutil.copyfile(self.relative("work", "_data", answers[i]), test_path + ".a")
 
         iprint("Done!")
 
