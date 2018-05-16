@@ -1,7 +1,7 @@
 _pmaker() {
     if [ ${COMP_CWORD} -eq 1 ]
     then
-        COMPREPLY=( $( compgen -W "tests invoke invokation-list testview help clean" -- ${COMP_WORDS[1]} ) )
+        COMPREPLY=( $( compgen -W "tests invoke invocation-list testview help clean" -- ${COMP_WORDS[1]} ) )
         return 0
     fi
 

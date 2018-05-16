@@ -1,14 +1,14 @@
-from pmaker.invokation import Invokation, InvokationStatus
+from pmaker.invocation import Invokation, InvokationStatus
 import os
 import json
 
 class ArchivedInvokationDesc:
-    def __init__(self, ainvokation, i, j):
-        self.ainvokation = ainvokation
+    def __init__(self, ainvocation, i, j):
+        self.ainvocation = ainvocation
         self.the_i = i
         self.the_j = j
 
-        self.info = ainvokation.info[self.the_i][self.the_j]
+        self.info = ainvocation.info[self.the_i][self.the_j]
         if self.info == None:
             self.info = dict()
         
@@ -25,7 +25,7 @@ class ArchivedInvokationDesc:
         else:
             res = InvokationStatus.INCOMPLETE
 
-        if self.tusage != None and self.tusage >= self.ainvokation.timelimit:
+        if self.tusage != None and self.tusage >= self.ainvocation.timelimit:
             res = res.make_tl(ignore_fail=True)
         return res
 
@@ -90,7 +90,7 @@ class InvokationManager:
         self.homedir = homedir
         self.active  = dict()
         
-    def list_invokations(self):
+    def list_invocations(self):
         lst = []
         
         if os.path.exists(self.homedir):
@@ -108,10 +108,10 @@ class InvokationManager:
     def list_active(self):
         return self.active.keys()
     
-    def new_invokation(self, judge, solutions, test_indices):
+    def new_invocation(self, judge, solutions, test_indices):
         timelim = self.prob.get_problem_limits().get_timelimit()
         memlim  = self.prob.get_problem_limits().get_memorylimit()
-        lst = self.list_invokations()
+        lst = self.list_invocations()
         
         uid  = 0 if len(lst) == 0 else max(lst) + 1
         path = os.path.join(self.homedir, str(uid))
@@ -121,13 +121,13 @@ class InvokationManager:
 
         return (uid, self.active[uid])
 
-    def get_invokation(self, uid):
+    def get_invocation(self, uid):
         if uid in self.active:
             return self.active[uid]
-        elif uid in self.list_invokations():
+        elif uid in self.list_invocations():
             return ArchivedInvokation(os.path.join(self.homedir, str(uid)))
         else:
             return None
 
-def new_invokation_manager(prob, homedir):
+def new_invocation_manager(prob, homedir):
     return InvokationManager(prob, homedir)

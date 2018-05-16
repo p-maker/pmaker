@@ -50,10 +50,10 @@ class InvokationStatus(IntEnum):
 
 
 class InvokeDesc:
-    def __init__(self, invokation, limits, sol_no, solution, test_no, export):
-        self.invokation = invokation
-        self.prob       = invokation.prob
-        self.judge      = invokation.judge
+    def __init__(self, invocation, limits, sol_no, solution, test_no, export):
+        self.invocation = invocation
+        self.prob       = invocation.prob
+        self.judge      = invocation.judge
         self.limits     = limits
         self.sol_no     = sol_no
         self.solution   = solution
@@ -67,7 +67,7 @@ class InvokeDesc:
 
     def redump(self):
         try:
-            with open(self.invokation.relative("results", self.export), "w") as fp:
+            with open(self.invocation.relative("results", self.export), "w") as fp:
                 db = {}
                 if self.totaltime:
                     db["time_usage"] = self.totaltime
@@ -91,7 +91,7 @@ class InvokeDesc:
 
         the_input = self.prob.relative("work", "_data", self.prob.get_test_input_data(self.the_test))
         
-        jobhelper.run(self.invokation.relative("compilations", "{}".format(self.sol_no)), in_file=the_input, c_handler=self.invoke_done)
+        jobhelper.run(self.invocation.relative("compilations", "{}".format(self.sol_no)), in_file=the_input, c_handler=self.invoke_done)
 
         self.jobhelper = jobhelper
         self.state = 1 # testing
@@ -103,12 +103,12 @@ class InvokeDesc:
         self.totaltime = self.jobhelper.get_timeusage()
         self.totalmem  = self.jobhelper.get_memusage()
 
-        with open(self.invokation.relative("output", self.export), "w") as fp:
+        with open(self.invocation.relative("output", self.export), "w") as fp:
             fp.write(self.jobhelper.read_stdout())
-        with open(self.invokation.relative("output", self.export + "_err"), "w") as fp:
+        with open(self.invocation.relative("output", self.export + "_err"), "w") as fp:
             fp.write(self.jobhelper.read_stderr())
         if self.jobhelper.is_ok_or_re():
-            with open(self.invokation.relative("output", self.export + "_code"), "w") as fp:
+            with open(self.invocation.relative("output", self.export + "_code"), "w") as fp:
                 fp.write(str(self.jobhelper.exit_code()))
         
         if rs in [JobResult.TL]:
@@ -151,7 +151,7 @@ class InvokeDesc:
         jobhelper.set_priority(30)
         jobhelper.add_file(the_input, "/input")
         jobhelper.add_file(the_output, "/correct")
-        jobhelper.add_file(self.invokation.relative("output", self.export), "/output")
+        jobhelper.add_file(self.invocation.relative("output", self.export), "/output")
 
         jobhelper.run(self.prob.relative("work", "compiled", "check.cpp"), prog_args=["input", "output", "correct"], c_handler=self.check_done)
 
@@ -172,13 +172,13 @@ class InvokeDesc:
                 self.result = self.prob.parse_exit_code(code)
 
         try:
-            with open(self.invokation.relative("output", self.export + "_check"), "w") as fp:
+            with open(self.invocation.relative("output", self.export + "_check"), "w") as fp:
                 fp.write(self.jobhelper.read_stderr())
         except:
             raise
         if rs.ok_or_re():
             try:
-                with open(self.invokation.relative("output", self.export + "_checkcode"), "w") as fp:
+                with open(self.invocation.relative("output", self.export + "_checkcode"), "w") as fp:
                     fp.write(str(self.jobhelper.exit_code()))
             except:
                 pass
@@ -202,7 +202,7 @@ class InvokeDesc:
         if self.state == 2:
             return InvokationStatus.CHECKING
         
-        if self.totaltime >= self.invokation.timelimit:
+        if self.totaltime >= self.invocation.timelimit:
             return self.result.make_tl(ignore_fail=True)
         else:
             return self.result

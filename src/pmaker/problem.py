@@ -847,7 +847,7 @@ class Problem(ProblemBase):
                     shutil.rmtree(self.relative("work", part))
 
     def parse_exit_code(self, code):
-        from pmaker.invokation import InvokationStatus
+        from pmaker.invocation import InvokationStatus
 
         db = {0: InvokationStatus.OK,
               1: InvokationStatus.WA,

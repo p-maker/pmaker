@@ -115,44 +115,44 @@ class WebUI:
                         self.send_404()
                         return
 
-                if parts == ["invokation"] and webui.imanager != None:
-                    invokations = webui.imanager.list_invokations()
+                if parts == ["invocation"] and webui.imanager != None:
+                    invocations = webui.imanager.list_invocations()
                     active      = webui.imanager.list_active()
 
                     def is_active(name):
                         return name in active
 
-                    def get_solutions(invokation):
+                    def get_solutions(invocation):
                         try:
-                            return " ".join(invokation.get_solutions())
+                            return " ".join(invocation.get_solutions())
                         except:
                             return "<span style='color: red'>Data not available</span>"
 
-                    invokations.sort()
-                    invokations.reverse()
-                    self.render("invokation_list.html", prob=webui.prob, get_solutions=get_solutions, invokations=invokations, active=is_active, imanager=webui.imanager)
+                    invocations.sort()
+                    invocations.reverse()
+                    self.render("invocation_list.html", prob=webui.prob, get_solutions=get_solutions, invocations=invocations, active=is_active, imanager=webui.imanager)
                     return
                     
-                if parts[:1] == ["invokation"] and len(parts) == 2 and webui.imanager != None:
-                    the_invokation = None
+                if parts[:1] == ["invocation"] and len(parts) == 2 and webui.imanager != None:
+                    the_invocation = None
                     uid = None
                     try:
                         uid = int(parts[1])
-                        the_invokation = webui.imanager.get_invokation(uid)
+                        the_invocation = webui.imanager.get_invocation(uid)
                     except:
                         self.send_404()
                         return
                     
-                    if the_invokation == None:
+                    if the_invocation == None:
                         self.send_404()
                         return
                     
-                    solutions     = the_invokation.get_solutions()
-                    test_indices  = the_invokation.get_tests()
+                    solutions     = the_invocation.get_solutions()
+                    test_indices  = the_invocation.get_tests()
 
                     def render_extras(i, j, hard_tl=False, tl_plus=False):
-                        if the_invokation.get_descriptor(i, j).is_final():
-                            (tm, mem) = the_invokation.get_descriptor(i, j).get_rusage()
+                        if the_invocation.get_descriptor(i, j).is_final():
+                            (tm, mem) = the_invocation.get_descriptor(i, j).get_rusage()
                             display_tm = None
                             if tm == None:
                                 display_tm = "?"
@@ -168,15 +168,15 @@ class WebUI:
                                 display_mem = "?"
                             else:
                                 display_mem = "%.0f mb" % (mem / 1000)
-                            return '<span class="invokation_stat">(%s, %s)</span>' % (display_tm, display_mem)
+                            return '<span class="invocation_stat">(%s, %s)</span>' % (display_tm, display_mem)
                         return ""
 
                     def render_cell(i, j):
                         hard_tl = False
                         tl_plus   = False
 
-                        from pmaker.invokation import InvokationStatus
-                        res = the_invokation.get_result(i, j)
+                        from pmaker.invocation import InvokationStatus
+                        res = the_invocation.get_result(i, j)
                         if res == InvokationStatus.TL:
                             hard_tl = True
                         if res == InvokationStatus.TL_OK:
@@ -194,11 +194,11 @@ class WebUI:
                         extras = ""
                         if res != InvokationStatus.INCOMPLETE:
                             extras   = render_extras(i, j, hard_tl=hard_tl, tl_plus=tl_plus)
-                        return '<td onclick="open_cell({},{})" class="invokation_cell_{}">{} {}</td>'.format(i, j, res.name, internal, extras)
+                        return '<td onclick="open_cell({},{})" class="invocation_cell_{}">{} {}</td>'.format(i, j, res.name, internal, extras)
 
                     def render_stats():
                         from collections import OrderedDict
-                        from pmaker.invokation import InvokationStatus
+                        from pmaker.invocation import InvokationStatus
                         
                         data = OrderedDict()
                         class SimpleStruct:
@@ -222,8 +222,8 @@ class WebUI:
 
                         for i in range(len(solutions)):
                             for j in range(len(test_indices)):
-                                result = the_invokation.get_result(i, j)
-                                (tm, mem) = the_invokation.get_descriptor(i, j).get_rusage()
+                                result = the_invocation.get_result(i, j)
+                                (tm, mem) = the_invocation.get_descriptor(i, j).get_rusage()
                                 do_update("", i, tm, mem, result)
                                 if webui.prob.get_testset().by_index(test_indices[j]).has_group():
                                     do_update(webui.prob.get_testset().by_index(test_indices[j]).get_group(), i, tm, mem, result)
@@ -233,12 +233,12 @@ class WebUI:
                                 value[i].verdicts.sort()
                         return data.items()
                     
-                    from pmaker.invokation import InvokationStatus
-                    self.render("invokation.html", prob=webui.prob, invokation=the_invokation, solutions=solutions, test_indices=test_indices, uid=uid, render_stats=render_stats, render_cell=render_cell, InvokationStatus=InvokationStatus, **self.get_template_namespace())
+                    from pmaker.invocation import InvokationStatus
+                    self.render("invocation.html", prob=webui.prob, invocation=the_invocation, solutions=solutions, test_indices=test_indices, uid=uid, render_stats=render_stats, render_cell=render_cell, InvokationStatus=InvokationStatus, **self.get_template_namespace())
                     return
 
-                if len(parts) == 4 and parts[0] == "invokation" and parts[2] == "compilation" and webui.imanager != None:
-                    the_invokation = None
+                if len(parts) == 4 and parts[0] == "invocation" and parts[2] == "compilation" and webui.imanager != None:
+                    the_invocation = None
                     uid = None
                     sol_id = None
                     solution = None
@@ -246,21 +246,21 @@ class WebUI:
                     try:
                         uid = int(parts[1])
                         sol_id = int(parts[3])
-                        the_invokation = webui.imanager.get_invokation(uid)
-                        solution = the_invokation.get_solutions()[sol_id]
+                        the_invocation = webui.imanager.get_invocation(uid)
+                        solution = the_invocation.get_solutions()[sol_id]
                     except:
                         self.send_404()
                         return
                     
-                    if the_invokation == None:
+                    if the_invocation == None:
                         self.send_404()
                         return
 
-                    self.render("invokation_compilation.html", uid=uid, solution=solution, sol_id=sol_id, invokation=the_invokation, **self.get_template_namespace())
+                    self.render("invocation_compilation.html", uid=uid, solution=solution, sol_id=sol_id, invocation=the_invocation, **self.get_template_namespace())
                     return
                 
-                if len(parts) == 5 and parts[0] == "invokation" and parts[2] == "result" and webui.imanager != None:
-                    the_invokation = None
+                if len(parts) == 5 and parts[0] == "invocation" and parts[2] == "result" and webui.imanager != None:
+                    the_invocation = None
                     uid      = None
                     sol_id   = None
                     test_id  = None
@@ -272,24 +272,24 @@ class WebUI:
                         uid     = int(parts[1])
                         sol_id  = int(parts[3])
                         test_id = int(parts[4])
-                        the_invokation = webui.imanager.get_invokation(uid)
+                        the_invocation = webui.imanager.get_invocation(uid)
                         
-                        solution = the_invokation.get_solutions()[sol_id]
-                        test     = the_invokation.get_tests()[test_id]
+                        solution = the_invocation.get_solutions()[sol_id]
+                        test     = the_invocation.get_tests()[test_id]
                         the_test = webui.prob.get_testset().by_index(test)
                     except:
                         self.send_404()
                         return
                     
-                    if the_invokation == None:
+                    if the_invocation == None:
                         self.send_404()
                         return
                     
-                    self.render("invokation_run.html", prob=webui.prob, uid=uid, solution=solution, sol_id=sol_id, invokation=the_invokation, test_id=test_id, test=test, the_test=the_test, **self.get_template_namespace())
+                    self.render("invocation_run.html", prob=webui.prob, uid=uid, solution=solution, sol_id=sol_id, invocation=the_invocation, test_id=test_id, test=test, the_test=the_test, **self.get_template_namespace())
                     return
 
-                if len(parts) == 4 and parts[0] == "invokation" and parts[2] == "source" and webui.imanager != None:
-                    the_invokation = None
+                if len(parts) == 4 and parts[0] == "invocation" and parts[2] == "source" and webui.imanager != None:
+                    the_invocation = None
                     uid      = None
                     sol_id   = None
                     solution = None
@@ -297,14 +297,14 @@ class WebUI:
                     try:
                         uid     = int(parts[1])
                         sol_id  = int(parts[3])
-                        the_invokation = webui.imanager.get_invokation(uid)
+                        the_invocation = webui.imanager.get_invocation(uid)
                         
-                        solution = the_invokation.get_solutions()[sol_id]
+                        solution = the_invocation.get_solutions()[sol_id]
                     except:
                         self.send_404()
                         return
                     
-                    if the_invokation == None:
+                    if the_invocation == None:
                         self.send_404()
                         return
 
@@ -340,13 +340,13 @@ class WebUI:
     def mode_testview(self):
         self.default = "/test_view"
 
-    def mode_invokation_list(self, imanager):
+    def mode_invocation_list(self, imanager):
         self.imanager = imanager
-        self.default = "/invokation"
+        self.default = "/invocation"
         
-    def mode_invokation(self, uid, imanager):
+    def mode_invocation(self, uid, imanager):
         self.imanager = imanager
-        self.default = "/invokation/{}".format(uid)
+        self.default = "/invocation/{}".format(uid)
     
     def start(self):                
         print("Please connect to http://localhost:{}".format(self.port))

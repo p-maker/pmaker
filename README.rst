@@ -51,7 +51,7 @@ Following commands are provided
   pmaker invoke <list of solutions> # invokes the specified solutions, use localhost:8128 to see the results
   pmaker invoke @all                # convenience macro
   pmaker view-tests                 # shows all the tests, in browser
-  pmaker invokation-list            # to view previous invokations
+  pmaker invocation-list            # to view previous invokations
 
 
 Example problem

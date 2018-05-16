@@ -38,19 +38,19 @@ span.data_empty {
     font-style: italic;
 }
 
-td.invokation_cell_RUNNING {
+td.invocation_cell_RUNNING {
     background-color: #DDFF62;
 }
 
-td.invokation_cell_CHECKING {
+td.invocation_cell_CHECKING {
     background-color: #CDFF1A;
 }
 
-td.invokation_cell_COMPILING span.iverdict {
+td.invocation_cell_COMPILING span.iverdict {
     color: #7AA6FF;
 }
 
-td.invokation_cell_INCOMPLETE span.iverdict {
+td.invocation_cell_INCOMPLETE span.iverdict {
     color: #8BDDEC;
 }
 
@@ -75,7 +75,7 @@ span.iverdict_PE, span.iverdict.TL_PE {
     color: #FF2807;
 }
 
-span.invokation_stat {
+span.invocation_stat {
     font-size: 77%;
 }
 

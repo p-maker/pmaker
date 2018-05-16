@@ -2,14 +2,14 @@
 <html>
 <head>
   <link href="/static/style.css" type="text/css" rel="stylesheet">
-  <title> pmaker &mdash; invokation </title>
+  <title> pmaker &mdash; invocation </title>
 
   <script>
     function open_solution_window(sol_id) {
-        location = "/invokation/{{uid}}/compilation/" + sol_id;
+        location = "/invocation/{{uid}}/compilation/" + sol_id;
     }
     function open_cell(sol_id, run_id) {
-        location = "/invokation/{{uid}}/result/" + sol_id + "/" + run_id;
+        location = "/invocation/{{uid}}/result/" + sol_id + "/" + run_id;
     }
   </script>
 </head>
@@ -57,7 +57,7 @@
       </td>
       
       {% for j in range(len(solutions)) %}
-      <td><span class="invokation_stat">
+      <td><span class="invocation_stat">
           {% if InvokationStatus.TL in line[j].verdicts %}
           <span class="was_tl">inf</span>
           {% else %}

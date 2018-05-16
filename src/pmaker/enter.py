@@ -33,9 +33,9 @@ def cmd(want=[], arg=None, manual=None, long_help=None):
                 return new_func(argv, __ptr=__ptr+1, __kwargs=__kwargs)
 
             if feature == "imanager":
-                from pmaker.invokation_manager import new_invokation_manager
+                from pmaker.invocation_manager import new_invocation_manager
                 
-                __kwargs["imanager"] = new_invokation_manager(__kwargs["prob"], __kwargs["prob"].relative("work", "invokations"))
+                __kwargs["imanager"] = new_invocation_manager(__kwargs["prob"], __kwargs["prob"].relative("work", "invocations"))
                 return new_func(argv, __ptr=__ptr+1, __kwargs=__kwargs)
 
             if feature == "ui":
@@ -89,8 +89,8 @@ or     pmaker invoke @all
 
 You will probably want to run "pmaker tests" prior this command.
 
-The link http://localhost:8128/ will redirect you to the ongoing invokation
-See also http://localhost:8128/invokation for invokation list
+The link http://localhost:8128/ will redirect you to the ongoing invocation
+See also http://localhost:8128/invocation for invocation list
 """)
 def cmd_invoke(prob=None, imanager=None, judge=None, ui=None, argv=None):
     import threading
@@ -104,25 +104,25 @@ def cmd_invoke(prob=None, imanager=None, judge=None, ui=None, argv=None):
         solutions = os.listdir(prob.relative("solutions"))
         solutions.sort()
     
-    uid, invokation = imanager.new_invokation(judge, solutions, test_indices)
-    ithread = threading.Thread(target=invokation.start)
+    uid, invocation = imanager.new_invocation(judge, solutions, test_indices)
+    ithread = threading.Thread(target=invocation.start)
     ithread.start()
             
-    ui.mode_invokation(uid, imanager)
+    ui.mode_invocation(uid, imanager)
     ui.start()
         
     ithread.join()
     return 0
 
-@cmd(want=["prob", "imanager", "ui"], arg="invokation-list",
-     manual="Show previous invokations",
-     long_help="""Starts the web server so you can examine previous invokations
+@cmd(want=["prob", "imanager", "ui"], arg="invocation-list",
+     manual="Show previous invocations",
+     long_help="""Starts the web server so you can examine previous invocations
      
-See http://localhost:8128/invokation for invokation list
-And http://localhost:8128/invokation/<invokation_no> for the previous invokation
+See http://localhost:8128/invocation for invocation list
+And http://localhost:8128/invocation/<invocation_no> for the previous invocation
      """)
-def cmd_invokation_list(prob=None, imanager=None, ui=None):
-    ui.mode_invokation_list(imanager)
+def cmd_invocation_list(prob=None, imanager=None, ui=None):
+    ui.mode_invocation_list(imanager)
     ui.start()
     return 0
 
@@ -179,9 +179,9 @@ def cmd_help2():
     return cmd_help([])
 
 @cmd(want=["prob", "argv"], arg="clean", manual="Wipe data",
-     long_help = """Wipes all generated data and cache, except invokations.
+     long_help = """Wipes all generated data and cache, except invocations.
 
-Add "--mrpropper" flag to wipe invokations as well.
+Add "--mrpropper" flag to wipe invocations as well.
 """)
 def cmd_clean(prob=None, argv=None):
     if not argv in [[], ["--mrpropper"]]:
