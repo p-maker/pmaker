@@ -1,0 +1,23 @@
+_pmaker() {
+    if [ ${COMP_CWORD} -eq 1 ]
+    then
+        COMPREPLY=( $( compgen -W "tests invoke invokation-list testview help clean" -- ${COMP_WORDS[1]} ) )
+        return 0
+    fi
+
+    local cmd=${COMP_WORDS[1]}
+    if [ "x$cmd" = "xinvoke" ]
+    then
+        if [ ${COMP_CWORD} -eq 2 ]
+        then
+            COMPREPLY=( $( compgen -W "@all $( eval command ls "solutions" 2>/dev/null )" -- ${COMP_WORDS[2]} ) )
+        else
+            if [ "x${COMP_WORDS[2]}" != "x@all" ]
+            then
+                COMPREPLY=( $( compgen -W "$( eval command ls "solutions" 2>/dev/null )" -- ${COMP_WORDS[${COMP_CWORD}]} ) )
+            fi
+        fi
+    fi
+}
+
+complete -F _pmaker pmaker

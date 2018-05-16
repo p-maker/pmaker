@@ -58,3 +58,14 @@ Example problem
 ----------------
 
 TODO.
+
+Install completion (optional)
+-----------------------------
+
+Completions are provided for bash and located under "completion" folder.
+
+To install bash completion helper copy it to the directory like "/etc/bash_completion.d".
+Exact directory name may depend on your Distribution
+
+
+zsh completion is under development

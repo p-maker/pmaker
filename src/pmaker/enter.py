@@ -80,18 +80,6 @@ def cmd_tests(prob=None, judge=None):
     prob.update_tests()
     return 0
 
-@cmd(want=["prob", "imanager", "ui"], arg="invokation-list",
-     manual="Show previous invokations",
-     long_help="""Starts the web server so you can examine previous invokations
-     
-See http://localhost:8128/invokation for invokation list
-And http://localhost:8128/invokation/<invokation_no> for the previous invokation
-     """)
-def cmd_invokation_list(prob=None, imanager=None, ui=None):
-    ui.mode_invokation_list(imanager)
-    ui.start()
-    return 0
-
 @cmd(want=["prob", "imanager", "judge", "ui", "argv"], arg="invoke",
      manual="Invoke specified solutions",
      long_help="""Invokes the specified solutions
@@ -124,6 +112,18 @@ def cmd_invoke(prob=None, imanager=None, judge=None, ui=None, argv=None):
     ui.start()
         
     ithread.join()
+    return 0
+
+@cmd(want=["prob", "imanager", "ui"], arg="invokation-list",
+     manual="Show previous invokations",
+     long_help="""Starts the web server so you can examine previous invokations
+     
+See http://localhost:8128/invokation for invokation list
+And http://localhost:8128/invokation/<invokation_no> for the previous invokation
+     """)
+def cmd_invokation_list(prob=None, imanager=None, ui=None):
+    ui.mode_invokation_list(imanager)
+    ui.start()
     return 0
 
 @cmd(want=["prob", "ui"], arg="testview", manual="Show test data",
@@ -177,37 +177,6 @@ def cmd_help(argv=None):
 @cmd(arg="--help")
 def cmd_help2():
     return cmd_help([])
-
-@cmd(want=["prob", "imanager", "judge", "ui", "argv"], arg="invoke",
-     manual="Invoke specified solutions",
-     long_help="""Invokes the specified solutions
-
-Usage: pmaker invoke [list-of-solutions],
-or     pmaker invoke @all
-
-The link http://localhost:8128/ will redirect you to the ongoing invokation
-See also http://localhost:8128/invokation for invokation list
-""")
-def cmd_invoke(prob=None, imanager=None, judge=None, ui=None, argv=None):
-    import threading
-    
-    solutions = argv
-    test_list = prob.get_test_list()
-    test_indices = [i + 1 for i in range(len(test_list))]
-    
-    if solutions == ["@all"]:
-        solutions = os.listdir(prob.relative("solutions"))
-        solutions.sort()
-    
-    uid, invokation = imanager.new_invokation(judge, solutions, test_indices)
-    ithread = threading.Thread(target=invokation.start)
-    ithread.start()
-            
-    ui.mode_invokation(uid, imanager)
-    ui.start()
-        
-    ithread.join()
-    return 0
 
 @cmd(want=["prob", "argv"], arg="clean", manual="Wipe data",
      long_help = """Wipes all generated data and cache, except invokations.
