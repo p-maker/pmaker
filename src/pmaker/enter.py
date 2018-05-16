@@ -476,6 +476,8 @@ def cmd_invokation_list(prob=None, imanager=None, ui=None):
 Usage: pmaker invoke [list-of-solutions],
 or     pmaker invoke @all
 
+You will probably want to run "pmaker tests" prior this command.
+
 The link http://localhost:8128/ will redirect you to the ongoing invokation
 See also http://localhost:8128/invokation for invokation list
 """)
@@ -512,6 +514,7 @@ def cmd_testview(prob=None, ui=None):
     ui.mode_testview()
     ui.start()
     return 0
+
 
 @cmd(want=["argv"], arg="help", manual="Show this help")
 def cmd_help(argv=None):
@@ -550,6 +553,49 @@ def cmd_help(argv=None):
 @cmd(arg="--help")
 def cmd_help2():
     return cmd_help([])
+
+@cmd(want=["prob-old", "imanager", "judge", "ui", "argv"], arg="invoke",
+     manual="Invoke specified solutions",
+     long_help="""Invokes the specified solutions
+
+Usage: pmaker invoke [list-of-solutions],
+or     pmaker invoke @all
+
+The link http://localhost:8128/ will redirect you to the ongoing invokation
+See also http://localhost:8128/invokation for invokation list
+""")
+def cmd_invoke(prob=None, imanager=None, judge=None, ui=None, argv=None):
+    import threading
+    
+    solutions = argv
+    test_list = prob.get_test_list()
+    test_indices = [i + 1 for i in range(len(test_list))]
+    
+    if solutions == ["@all"]:
+        solutions = os.listdir(prob.relative("solutions"))
+        solutions.sort()
+    
+    uid, invokation = imanager.new_invokation(judge, solutions, test_indices)
+    ithread = threading.Thread(target=invokation.start)
+    ithread.start()
+            
+    ui.mode_invokation(uid, imanager)
+    ui.start()
+        
+    ithread.join()
+    return 0
+
+@cmd(want=["prob", "argv"], arg="clean", manual="Wipe data",
+     long_help = """Wipes all generated data and cache, except invokations.
+
+Add "--mrpropper" flag to wipe invokations as well.
+""")
+def cmd_clean(prob=None, argv=None):
+    if not argv in [[], ["--mrpropper"]]:
+        print("Unrecognized arg")
+
+    prob.wipe(mrpropper=(argv == ["--mrpropper"]))
+    return 0
 
 def main():
     argv = sys.argv[1:]

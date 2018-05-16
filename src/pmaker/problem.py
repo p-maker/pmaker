@@ -792,3 +792,14 @@ class Problem(ProblemBase):
             shutil.copyfile(self.relative("work", "_data", "ans.{}".format(inputs[i])), test_path + ".a")
 
         iprint("Done!")
+
+    def wipe(self, mrpropper=False):
+        if mrpropper:
+            shutil.rmtree(self.relative("work"))
+        else:
+            for part in ["compiled","_data", "_jobs", "tests", "testset"]:
+                if os.path.isfile(self.relative("work", part)):
+                    os.remove(self.relative("work", part))
+                elif os.path.isdir(self.relative("work", part)):
+                    shutil.rmtree(self.relative("work", part))
+        
