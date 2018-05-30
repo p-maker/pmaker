@@ -92,7 +92,8 @@ class InvokationManager:
         
     def list_invocations(self):
         lst = []
-        
+
+        print(self.homedir)
         if os.path.exists(self.homedir):
             for elem in os.listdir(self.homedir):
                 try:

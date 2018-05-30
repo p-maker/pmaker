@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <title>PMaker web (alpha)</title>
+    <link href="/static/style.css" type="text/css" rel="stylesheet">
+    <meta charset="UTF-8">
+  </head>
+  <body>
+    <p>Problem {{name}}</p>
+
+    {% if testset == None %}
+    <p> Updating...</p>
+    {% else %}
+    <table border class="collapsed">
+      <tr> <td> No </td> <td> Command </td> <td> 
+      {% for i in range(1, testset.size() + 1) %}
+      <tr>
+        <td>{{i}}
+          {{ "(group {})".format(testset[i].get_group()) if testset[i].has_group() else ""}}
+        </td>
+        <td> {{testset[i].get_display_cmd()}} </td>
+        <td><a href="/p/{{uid}}/tests/{{i}}/input" class="action">input</a></td>
+        <td><a href="/p/{{uid}}/tests/{{i}}/output" class="action">output</a></td>
+               </tr>
+      {% endfor %}
+    </table>
+    {% endif %}
+  </body>
+</html>
+
+

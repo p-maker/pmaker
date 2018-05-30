@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <title>PMaker web (alpha)</title>
+    
+    <link rel="stylesheet" type="text/css" href="/static/style.css">
+    <meta charset="UTF-8">
+  </head>
+  <body>
+    <div class="centraldiv" style="width: 60%; margin-top: 20px">
+      Add new problem <br>
+
+      <form action="/newprob" method="POST">
+        <input type="text" name="name" placeholder="problem name"></input>
+        <input type="text" name="url" placeholder="clone url"></input>
+        <input type="text" name="user" placeholder="user name (optional)"></input>
+        <input type="text" name="password" placeholder="password (optional)"></input>
+
+        <p>Please use https git repositories at the moment.<p>
+          <button type="submit">add!</button>
+      </form>
+    </div>
+  </body>
+</html>
+
+
+ 

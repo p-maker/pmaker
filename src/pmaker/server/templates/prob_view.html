@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <title>PMaker web (alpha)</title>
+    <link href="/static/style.css" type="text/css" rel="stylesheet">
+    <meta charset="UTF-8">
+  </head>
+  <body>
+    <p>Problem {{name}} </p>
+
+    {% if status != None %}
+    <p> {{status}} is in progress </p>
+    {% endif %}
+    
+    <p><a href="/p/{{uid}}/fs/" class="action">View filesystem</a></p>
+
+    <p><a href="/p/{{uid}}/up/" class="action">Update?</a></p>
+
+    {% if prob != None %}
+    <ul>
+      <li>Time Limit: {{prob._time_limit}} ms</li>
+      <li>Memory Limit: {{prob._mem_limit}} kb</li>
+      <li>Model solution: {{make_ref(prob._model_solution, where="solutions")}}</li>
+      <li>Validator: {{make_ref(prob._validator)}}</li>
+      <li>Checker: {{make_ref(prob._checker)}}</li>
+      <li>Script: {{make_ref(prob._script)}}</li>
+      <li><a href="/p/{{uid}}/tests">Tests</a></li>
+      <li><a href="/p/{{uid}}/invocations">Invocations</a></li>
+    </ul>
+
+    {% else %}
+    <p>Can't display problem, try checking that it has valid "problem.cfg"
+    {% endif %}
+  </body>
+</html>
+
+

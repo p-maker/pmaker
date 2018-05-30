@@ -31,7 +31,7 @@ class ProblemCompilationFail(ProblemError):
 
     def __str__(self):
         return "Compilation failed for {}\nJudge result: {}\nExit code: {}\nstderr:\n{}\n[END]\n".format(self.source, self.judge_result, self.exit_code, self.stderr)
-
+    
 def lookup_problem(base=os.path.realpath("."), doraise=False):
     while True:
         if os.path.isfile(os.path.join(base, "problem.cfg")):
@@ -326,9 +326,10 @@ class JobCache:
         return digest
             
     def run_job(self, job_id, check_only=False):
+        print("##0")
         if job_id in self.completed_jobs:
             return
-        
+        print("##1")
         if self.prob.exists("work", "_jobs", job_id):
             jobinfo = None
             with open(self.prob.relative("work", "_jobs", job_id), "r") as fp:
@@ -343,9 +344,10 @@ class JobCache:
                 if ok:
                     return
 
+        print("##2")
         if check_only:
             raise ProblemJobOutdated()
-        
+        print("##3")
         for prov in self.providers:
             job = prov.get_job(job_id)
             if job != None:
@@ -363,6 +365,7 @@ class JobCache:
 
                 self.completed_jobs.add(job_id)
                 return
+        print("##4")
         raise ProblemJobNotFoundError()
 
     def safe_id_from_string(self, s):
@@ -587,6 +590,7 @@ class Problem(ProblemBase):
         return CacheableJob.wrap(func)
     
     def __do_gen_tests(self):
+        print("__do_gen_tests")
         if not self._script:
             raise ProblemError("There is no script")
         
@@ -594,6 +598,7 @@ class Problem(ProblemBase):
         if self._script.endswith(".py"):
             lang = "python3"
 
+        print("___")
         jh = self._judge.new_job_helper("invoke." + lang)
         limits = self._judge.new_limits()
         limits.set_memorylimit(16 * 1000)
@@ -602,8 +607,12 @@ class Problem(ProblemBase):
 
         jh.set_limits(limits)
         jh.run(self.relative(self._script))
+        print("____")
+        print(jh)
         jh.wait()
 
+        print("_1")
+        
         if not jh.result().ok():
             jh.release()
             raise ProblemError("Failed to invoke script")
@@ -723,13 +732,16 @@ class Problem(ProblemBase):
 
     
     def get_testset(self, check_only=False):
+        print("#1")
         if self._tests != None:
             return self._tests
-
+        print("#2")
         self._job_cache.run_job("tests", check_only=check_only)
+        print("#3")
         if self._tests == None:
             with open(self.relative("work", "testset"), "r") as fp:
                 self._tests = TestSet.load(json.load(fp))
+        print("#4")
 
         return self._tests
 

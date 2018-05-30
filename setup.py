@@ -24,7 +24,8 @@ setup(
     
     entry_points = {
         'console_scripts': [
-            'pmaker = pmaker.enter:main'
+            'pmaker  = pmaker.enter:main',
+            'pserver = pmaker.server.enter:main'
         ]
     },
     package_data = {

@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <title>PMaker web (alpha)</title>
+    <link href="/static/style.css" type="text/css" rel="stylesheet">
+    <meta charset="UTF-8">
+  </head>
+  <body>
+    <p>Problem {{name}}, directory listing for {{path}}</p>
+
+    <ul>
+    {% for obj in listing %}
+    <li> <a href="/p/{{uid}}/fs{{path}}{{obj}}">{{obj}}</a></li>
+    {% endfor %}
+    </ul>
+  </body>
+</html>
+
+

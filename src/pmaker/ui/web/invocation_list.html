@@ -5,12 +5,18 @@
   <title> pmaker &mdash; invocation list </title>
 
   <script>
-    function open_invocation(id) {
-       location = "/invocation/" + id;
+    function open_invocation(loc) {
+       location = loc;
     }
   </script>
 </head>
 <body>
+  {% if show_new %}
+  <p><a href="{{show_new[0]}}" class="action">new invocation?</a></p>
+  <p><a href="{{show_new[1]}}" class="action">update test data?</a></p>
+  {% endif %}
+  
+  
   <table border class="collapsed">
     <tr>
       <td> Invokation No </td>
@@ -20,12 +26,12 @@
     
     {% for uid in invocations %}
     <tr>
-      <td><a href="/invocation/{{uid}}">{{uid}}</a></td>
-      <td onclick="open_invocation({{uid}})">{{get_solutions(imanager.get_invocation(uid))}}</td>
+      <td><a href="{{make_url(uid)}}">{{uid}}</a></td>
+      <td onclick="open_invocation({{make_url(uid)}})">{{get_solutions(imanager.get_invocation(uid))}}</td>
       {% if active(uid) %}
-      <td onclick="open_invocation({{uid}})">Active</td>
+      <td onclick="open_invocation({{make_url(uid)}})">Active</td>
       {% else %}
-      <td onclick="open_invocation({{uid}})">Archived</td>
+      <td onclick="open_invocation({{make_url(uid)}})">Archived</td>
       {% endif %}
     </tr>
     {% endfor %}

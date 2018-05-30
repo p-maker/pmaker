@@ -381,6 +381,7 @@ class IsolatedJudge:
             if not self._running or job == None:
                 return
             job._work(self._boxes.get())
+            print("judge: +1")
 
     def _returnid(self, box_id):
         self._boxes.put(box_id)

@@ -6,6 +6,131 @@ import pkg_resources
 
 import pmaker
 
+def get_file_preview(path, limit=1024, linelimit=10):
+    try:
+        with open(path, "r") as f:
+            s = f.read(limit)
+
+            trail = False
+
+            if len(s) == limit:
+                trail = True
+
+            lines = s.split("\n")
+            if linelimit != -1 and len(lines) > linelimit:
+                s = "\n".join(lines[0:linelimit])
+                trail = True
+
+            if trail:
+                s += "..."
+
+            pre  = '<span class="data_text">'
+            post = '<span class="data_text">'
+            if s == "":
+                return '<span class="data_text data_empty">(empty)</span>'
+            return pre + html.escape(s).replace("\n","<br>") + post
+    except:
+        (_, ex, _) = sys.exc_info()
+        return "<span style=\"data_error\">failed to read: {}</span>".format(ex)
+
+def render_invocation(render_cmd, template_name, imanager, uid, prob, **tnamespace):
+    the_invocation = None
+
+    the_invocation = imanager.get_invocation(uid)
+
+    if the_invocation == None:
+        raise Exception()
+
+    solutions     = the_invocation.get_solutions()
+    test_indices  = the_invocation.get_tests()
+
+    def render_extras(i, j, hard_tl=False, tl_plus=False):
+        if the_invocation.get_descriptor(i, j).is_final():
+            (tm, mem) = the_invocation.get_descriptor(i, j).get_rusage()
+            display_tm = None
+            if tm == None:
+                display_tm = "?"
+            elif hard_tl:
+                display_tm = '<span class="hard_tl">inf</span>'
+            elif tl_plus:
+                display_tm = '<span class="was_tl">%.1f</span>' % (tm / 1000)
+            else:
+                display_tm = '%.1f' % (tm / 1000)
+
+            display_mem = None
+            if mem == None:
+                display_mem = "?"
+            else:
+                display_mem = "%.0f mb" % (mem / 1000)
+            return '<span class="invocation_stat">(%s, %s)</span>' % (display_tm, display_mem)
+        return ""
+
+    def render_cell(i, j):
+        hard_tl = False
+        tl_plus   = False
+
+        from pmaker.invocation import InvokationStatus
+        res = the_invocation.get_result(i, j)
+        if res == InvokationStatus.TL:
+            hard_tl = True
+        if res == InvokationStatus.TL_OK:
+            res = InvokationStatus.TL
+            tl_plus = True
+        elif res.is_tl():
+            res = res.undo_tl()
+            tl_plus = True
+
+        internal = ''
+        if len(res.name) >= 3:
+            internal = '<span class="iverdict iverdict_long iverdict_{}">{}</span>'.format(res.name, res.name)
+        else:
+            internal = '<span class="iverdict iverdict_{}">{}</span>'.format(res.name, res.name)
+        extras = ""
+        if res != InvokationStatus.INCOMPLETE:
+            extras   = render_extras(i, j, hard_tl=hard_tl, tl_plus=tl_plus)
+        return '<td onclick="open_cell({},{})" class="invocation_cell_{}">{} {}</td>'.format(i, j, res.name, internal, extras)
+
+    def render_stats():
+        from collections import OrderedDict
+        from pmaker.invocation import InvokationStatus
+
+        data = OrderedDict()
+        class SimpleStruct:
+            def __init__(self):
+                self.time = 0
+                self.mem  = 0
+                self.verdicts = []                        
+
+        def do_update(group, sol, tm, mem, verdict):
+            if not group in data:
+                data[group] = [SimpleStruct() for _ in range(len(solutions))]
+            if tm != None:
+                data[group][sol].time = max(tm, data[group][sol].time)
+            if mem != None:
+                data[group][sol].mem  = max(mem, data[group][sol].mem)
+
+            if verdict in [InvokationStatus.RUNNING, InvokationStatus.CHECKING]:
+                verdict = InvokationStatus.PENDING
+            if verdict.name != "RUNNING" and verdict.name != "CHECKING" and not verdict in data[group][sol].verdicts:
+                data[group][sol].verdicts.append(verdict)
+
+        for i in range(len(solutions)):
+            for j in range(len(test_indices)):
+                result = the_invocation.get_result(i, j)
+                (tm, mem) = the_invocation.get_descriptor(i, j).get_rusage()
+                do_update("", i, tm, mem, result)
+                if prob.get_testset().by_index(test_indices[j]).has_group():
+                    do_update(prob.get_testset().by_index(test_indices[j]).get_group(), i, tm, mem, result)
+
+        for (key, value) in data.items():
+            for i in range(len(solutions)):
+                value[i].verdicts.sort()
+        return data.items()
+
+    from pmaker.invocation import InvokationStatus
+    render_cmd(template_name, prob=prob, invocation=the_invocation, solutions=solutions, test_indices=test_indices, uid=uid, render_stats=render_stats, render_cell=render_cell, InvokationStatus=InvokationStatus, **tnamespace)
+
+    
 class WebUI:
     def __init__(self, prob):
         self.port = 8128
@@ -20,37 +145,10 @@ class WebUI:
             def write_string(self, s):
                 self.wfile.write(bytes(s, "utf-8"))
 
-            def get_file_preview(path, limit=1024, linelimit=10):
-                try:
-                    with open(path, "r") as f:
-                        s = f.read(limit)
-                
-                        trail = False
-                
-                        if len(s) == limit:
-                            trail = True
-                    
-                        lines = s.split("\n")
-                        if linelimit != -1 and len(lines) > linelimit:
-                            s = "\n".join(lines[0:linelimit])
-                            trail = True
-                    
-                        if trail:
-                            s += "..."
-                    
-                        pre  = '<span class="data_text">'
-                        post = '<span class="data_text">'
-                        if s == "":
-                            return '<span class="data_text data_empty">(empty)</span>'
-                        return pre + html.escape(s).replace("\n","<br>") + post
-                except:
-                    (_, ex, _) = sys.exc_info()
-                    return "<span style=\"data_error\">failed to read: {}</span>".format(ex)
-
             def get_template_namespace(self):
                 import builtins, os, os.path
                 mp = builtins.__dict__
-                mp["shortly"] = WebHandler.get_file_preview
+                mp["shortly"] = get_file_preview
                 mp["escape"]  = html.escape
 
                 mp["exists"] = os.path.exists
@@ -128,113 +226,21 @@ class WebUI:
                         except:
                             return "<span style='color: red'>Data not available</span>"
 
+                    def make_url(no):
+                        return "/invocation/{}".format(no)
+                        
                     invocations.sort()
                     invocations.reverse()
-                    self.render("invocation_list.html", prob=webui.prob, get_solutions=get_solutions, invocations=invocations, active=is_active, imanager=webui.imanager)
+                    self.render("invocation_list.html", prob=webui.prob, get_solutions=get_solutions, invocations=invocations, active=is_active, imanager=webui.imanager, show_new=None, make_url=make_url)
                     return
                     
                 if parts[:1] == ["invocation"] and len(parts) == 2 and webui.imanager != None:
-                    the_invocation = None
-                    uid = None
                     try:
-                        uid = int(parts[1])
-                        the_invocation = webui.imanager.get_invocation(uid)
+                        render_invocation(self.render, "invocation.html", webui.imanager, int(parts[1]), webui.prob, **self.get_template_namespace())
                     except:
+                        raise
                         self.send_404()
-                        return
-                    
-                    if the_invocation == None:
-                        self.send_404()
-                        return
-                    
-                    solutions     = the_invocation.get_solutions()
-                    test_indices  = the_invocation.get_tests()
-
-                    def render_extras(i, j, hard_tl=False, tl_plus=False):
-                        if the_invocation.get_descriptor(i, j).is_final():
-                            (tm, mem) = the_invocation.get_descriptor(i, j).get_rusage()
-                            display_tm = None
-                            if tm == None:
-                                display_tm = "?"
-                            elif hard_tl:
-                                display_tm = '<span class="hard_tl">inf</span>'
-                            elif tl_plus:
-                                display_tm = '<span class="was_tl">%.1f</span>' % (tm / 1000)
-                            else:
-                                display_tm = '%.1f' % (tm / 1000)
-
-                            display_mem = None
-                            if mem == None:
-                                display_mem = "?"
-                            else:
-                                display_mem = "%.0f mb" % (mem / 1000)
-                            return '<span class="invocation_stat">(%s, %s)</span>' % (display_tm, display_mem)
-                        return ""
-
-                    def render_cell(i, j):
-                        hard_tl = False
-                        tl_plus   = False
-
-                        from pmaker.invocation import InvokationStatus
-                        res = the_invocation.get_result(i, j)
-                        if res == InvokationStatus.TL:
-                            hard_tl = True
-                        if res == InvokationStatus.TL_OK:
-                            res = InvokationStatus.TL
-                            tl_plus = True
-                        elif res.is_tl():
-                            res = res.undo_tl()
-                            tl_plus = True
-
-                        internal = ''
-                        if len(res.name) >= 3:
-                            internal = '<span class="iverdict iverdict_long iverdict_{}">{}</span>'.format(res.name, res.name)
-                        else:
-                            internal = '<span class="iverdict iverdict_{}">{}</span>'.format(res.name, res.name)
-                        extras = ""
-                        if res != InvokationStatus.INCOMPLETE:
-                            extras   = render_extras(i, j, hard_tl=hard_tl, tl_plus=tl_plus)
-                        return '<td onclick="open_cell({},{})" class="invocation_cell_{}">{} {}</td>'.format(i, j, res.name, internal, extras)
-
-                    def render_stats():
-                        from collections import OrderedDict
-                        from pmaker.invocation import InvokationStatus
                         
-                        data = OrderedDict()
-                        class SimpleStruct:
-                            def __init__(self):
-                                self.time = 0
-                                self.mem  = 0
-                                self.verdicts = []                        
-                        
-                        def do_update(group, sol, tm, mem, verdict):
-                            if not group in data:
-                                data[group] = [SimpleStruct() for _ in range(len(solutions))]
-                            if tm != None:
-                                data[group][sol].time = max(tm, data[group][sol].time)
-                            if mem != None:
-                                data[group][sol].mem  = max(mem, data[group][sol].mem)
-                                
-                            if verdict in [InvokationStatus.RUNNING, InvokationStatus.CHECKING]:
-                                verdict = InvokationStatus.PENDING
-                            if verdict.name != "RUNNING" and verdict.name != "CHECKING" and not verdict in data[group][sol].verdicts:
-                                data[group][sol].verdicts.append(verdict)
-
-                        for i in range(len(solutions)):
-                            for j in range(len(test_indices)):
-                                result = the_invocation.get_result(i, j)
-                                (tm, mem) = the_invocation.get_descriptor(i, j).get_rusage()
-                                do_update("", i, tm, mem, result)
-                                if webui.prob.get_testset().by_index(test_indices[j]).has_group():
-                                    do_update(webui.prob.get_testset().by_index(test_indices[j]).get_group(), i, tm, mem, result)
-
-                        for (key, value) in data.items():
-                            for i in range(len(solutions)):
-                                value[i].verdicts.sort()
-                        return data.items()
-                    
-                    from pmaker.invocation import InvokationStatus
-                    self.render("invocation.html", prob=webui.prob, invocation=the_invocation, solutions=solutions, test_indices=test_indices, uid=uid, render_stats=render_stats, render_cell=render_cell, InvokationStatus=InvokationStatus, **self.get_template_namespace())
                     return
 
                 if len(parts) == 4 and parts[0] == "invocation" and parts[2] == "compilation" and webui.imanager != None:

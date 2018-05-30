@@ -1,0 +1,12 @@
+button, input {
+    display: block;
+    margin: 5px;
+}
+
+div.centraldiv {
+    margin: 0 auto;
+}
+
+input.inline {
+    display: inline;
+}

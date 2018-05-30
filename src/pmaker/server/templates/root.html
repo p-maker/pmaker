@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <title>PMaker web (alpha)</title>
+    <link href="/static/style.css" type="text/css" rel="stylesheet">
+    <meta charset="UTF-8">
+  </head>
+  <body>
+    Welcome to the PMaker <br>
+
+    {% if login != None %}
+    You are logged as {{login}}, <a href="/logout" class="action">logout?</a>
+    {% else %}
+    You are not logged in. <a href="/login" class="action">login?</a>
+    {% endif %}
+
+    {% if login != None %}
+    <p>Create <a href="/newprob" class="action">new</a> problem?</p>
+    <table class="collapsed" border>
+      <tr> <td>Problem</td> <td> Actions</td> </tr>
+      {% for (name, uid) in probs %}
+      <tr> <td>{{name}} </td> <td> <a href="/p/{{uid}}" class="action">open</a> <a href="/delete/{{uid}}" class="action">delete</a></td>
+      {% endfor %}
+    </table>
+    {% endif %}
+  </body>
+</html>
+
+

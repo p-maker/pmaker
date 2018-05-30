@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <title>PMaker web (alpha)</title>
+    <link href="/static/style.css" type="text/css" rel="stylesheet">
+    <meta charset="UTF-8">
+  </head>
+  <body>
+    Run new invocation
+    <form method="POST">
+      {% for sol in solutions %}
+      <label style="display: block"><input type="checkbox" class="inline" name="chkb_{{sol}}">{{sol}}</label>
+      {% endfor %}
+      <button type="submit">run!</button>
+    </form>
+  </body>
+</html>
+
+
