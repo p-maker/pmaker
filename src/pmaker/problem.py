@@ -754,8 +754,10 @@ class Problem(ProblemBase):
     def compile_result(self, *args):
         return self.relative("work", "compiled", self._job_cache.safe_id_from_slist(list(args)))
         
-    def update_tests(self, interactive=True):
+    def update_tests(self, interactive=True, custom_print=None):
         def iprint(*args, **kwargs):
+            if custom_print:
+                custom_print(*args, **kwargs)
             if interactive:
                 print(*args, **kwargs)
 

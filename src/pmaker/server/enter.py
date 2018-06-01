@@ -262,9 +262,32 @@ class _ProblemFsViewHandler(_BaseHandler):
                     return
                 self.redirect("/p/{}".format(uid))
             except:
-                raise
                 self.redirect("/p/{}".format(uid))
 
+class _ProblemLogHandler(_BaseHandler):
+    def get(self, uid, path):
+        with self.database() as db:
+            if self.get_login(db) == None:
+                self.redirect("/login")
+                return
+            
+            name = has_problem(db, uid)
+            if name == None:
+                self.redirect("/")
+                return
+            
+            dr = "repo/{}".format(uid)
+
+            try:
+                with open(dr + "/log/" + path) as fp:
+                    data = fp.read()
+                    self.set_header("Content-Type", "text/plain; charset=UTF-8")
+                    self.send_data(data)
+                    return
+            except:
+                self.send_data("<i> No data</i>")
+    
+                
 class _ProblemTestViewHandler(_BaseHandler):
     def get(self, uid):
         with self.database() as db:
@@ -357,10 +380,40 @@ class _ProblemUpdateHandler(_BaseHandler):
                 self.send_data("404 Not Found", code=404)
                 return
 
+            
             thread = threading.Thread(target=run_pull, args=(uid,"repo/{}".format(uid)))
             thread.start()
             self.redirect("/p/{}".format(uid))
 
+class _ProblemRegenHandler(_BaseHandler):
+    def get(self, uid):
+        with self.database() as db:
+            if self.get_login(db) == None:
+                self.redirect("/login")
+                return
+            
+            name = has_problem(db, uid)
+            if name == None:
+                self.send_data("404 Not Found", code=404)
+                return
+
+            prob = None
+            dr = "repo/{}".format(uid)
+            if os.path.isfile(dr + "/git/problem.cfg"):
+                try:
+                    prob = pmaker.problem.new_problem(dr + "/git")
+                except:
+                    pass
+                
+            if prob == None:
+                self.send_data("404", code=404)
+                return
+            
+            os.makedirs(dr + "/log", exist_ok=True)
+            logid = str(uuid.uuid4())
+            run_regen(uid, dr, prob, dr + "/log/{}".format(logid))
+            self.redirect("/p/{}/log/{}".format(uid, logid))
+            
 managers = dict()
 
 def get_manager(uid, prob):
@@ -412,7 +465,7 @@ class _ProblemInvocationListHandler(_BaseHandler):
             invocations.sort()
             invocations.reverse()
             
-            self.render("invocation_list.html", prob=prob, get_solutions=get_solutions, invocations=invocations, active=is_active, imanager=manager, show_new=["/p/{}/invocations/new".format(uid), "/p/{}/update_all".format(uid)], make_url=make_url)
+            self.render("invocation_list.html", prob=prob, get_solutions=get_solutions, invocations=invocations, active=is_active, imanager=manager, show_new=["/p/{}/invocations/new".format(uid), "/p/{}/regen".format(uid)], make_url=make_url)
                 
 
 class _ProblemNewInvocationHandler(_BaseHandler):
@@ -569,15 +622,27 @@ def run_pull(uid, dr):
         traceback.print_exc()
 
 
+def run_regen(uid, dr, prob, logpth):
+    def do_run():
+        with open(logpth, "w") as log:
+            def the_print(*args, **kwargs):
+                print(*args, **kwargs, file=log, flush=True)
+            
+            with DirLock(uid, dr, "test-update") as lock:
+                try:
+                    prob.update_tests(interactive=False, custom_print=the_print)
+                except:
+                    import traceback
+                    traceback.print_exc(log)
+                    
+    threading.Thread(target=do_run).start()
+
+                             
 def run_synchronized(uid, dr, func, reason):
     def do_run():
-        print("123")
         try:
             with DirLock(uid, dr, reason) as lock:
-                print("GOT LOCK")
                 func()
-                print("EXIT-0.5")
-            print("EXIT")
         except:
             import traceback
             traceback.print_exc()
@@ -603,11 +668,15 @@ def run_server(config, secret, home, db, judge):
             (r"/p/([^./]*)/tests",    _ProblemTestViewHandler, SYS_INFO),
             (r"/p/([^./]*)/tests/([^./]*)/input",    _ProblemTestDataHandler, extra(input=True)),
             (r"/p/([^./]*)/tests/([^./]*)/output",    _ProblemTestDataHandler, extra(input=False)),
+            (r"/p/([^./]*)/regen/?",    _ProblemRegenHandler, SYS_INFO),
+            (r"/p/([^./]*)/log/([^./]*)",    _ProblemLogHandler, SYS_INFO),
             (r"/p/([^./]*)/up/?",    _ProblemUpdateHandler, SYS_INFO),
             (r"/p/([^./]*)/fs/(.*)",    _ProblemFsViewHandler, SYS_INFO),
             (r"/p/([^./]*)/invocations/?",   _ProblemInvocationListHandler, SYS_INFO),
             (r"/p/([^./]*)/invocations/new",   _ProblemNewInvocationHandler, SYS_INFO),
             (r"/p/([^./]*)/invocations/([^./]*)",   _ProblemInvocationViewHandler, SYS_INFO),
+            
+            #(r"/p/([^./]*)/invocations/([^./]*)/result/([^./]*)/([^./]*)", _ProblemInvocationRunHandler, SYS_INFO),
             (r"/static/style.css", _StyleHandler, SYS_INFO)
         ],
         cookie_secret=secret)
