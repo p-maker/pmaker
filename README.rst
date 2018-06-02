@@ -57,7 +57,10 @@ Following commands are provided
 Example problem
 ----------------
 
-TODO.
+.. code:: bash
+
+  git clone https://github.com/p-maker/problem-aplusb
+
 
 Install completion (optional)
 -----------------------------
