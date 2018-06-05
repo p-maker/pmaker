@@ -30,7 +30,7 @@
         </td>
 
         <td class="data_container", onclick="open_test('{{index}}', 'output')">
-          {{ shortly(prob.relative("work", "_data", prob.get_test_input_data(tests[index]))) }}
+          {{ shortly(prob.relative("work", "_data", prob.get_test_output_data(tests[index]))) }}
         </td>
       </tr>
       {% endfor %}
