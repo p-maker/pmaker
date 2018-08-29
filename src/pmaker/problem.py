@@ -619,6 +619,8 @@ class Problem(ProblemBase):
         return [self.relative(self._script)]
 
     def __do_compile(self, src, lang="g++"):
+        if not os.path.isfile(self.relative(*src)):
+            raise ProblemError("File {} doesn't exist".format("/".join(src)))
         jh = self._judge.new_job_helper("compile." + lang)
         limits = self._judge.new_limits()
         limits.set_memorylimit(256 * 1000)
