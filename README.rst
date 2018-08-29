@@ -32,7 +32,7 @@ Install the sandbox
 
 .. code:: bash
 
-  [sudo] apt install libpcap-dev
+  [sudo] apt install libcap-dev
   git clone http://github.com/ioi/isolate
   make
   [sudo] make install

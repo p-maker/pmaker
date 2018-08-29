@@ -319,7 +319,8 @@ class WebUI:
                     try:
                         import pygments, pygments.lexers, pygments.formatters, pygments.styles
                     except:
-                        self.send_txt_data("To use viewer please install pygments", code=500)
+                        self.send_txt_data("To use syntax highlighting please install pygments!\n\n\n" + code)
+                        return
 
                     try:
                         lexer     = pygments.lexers.get_lexer_by_name("c++")
