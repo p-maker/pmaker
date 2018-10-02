@@ -1,4 +1,4 @@
-import shutil
+import shutil, stat, os
 
 class JobHelperCommon:
     def __init__(self, judge):
@@ -79,9 +79,10 @@ class JobHelperCompilation(JobHelperCommon):
 
         self.job = self.judge.new_job(env, self.limits, "/usr/bin/g++", "-Wall", "-Wextra", "-std=c++14", "-O2", "/box/source.cpp", "-o", "/box/source", c_handler=c_handler, c_args=c_args, priority=self.priority)
 
-    def fetch(self, result):
+    def fetch(self, result, runnable=False):
         shutil.copyfile(self.job.get_object_path("source"), result)
-
+        if runnable:
+            os.chmod(result, stat.S_IRWXU | stat.S_IROTH | stat.S_IRGRP)
 
         
 class JobHelperInvokation(JobHelperCommon):

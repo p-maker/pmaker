@@ -638,7 +638,7 @@ class Problem(ProblemBase):
             raise err
 
         os.makedirs(self.relative("work", "compiled"), exist_ok=True)
-        jh.fetch(self.compile_result(*src))
+        jh.fetch(self.compile_result(*src), runnable=True)
         jh.release()
         return [self.relative(*src)] # TODO
     
@@ -736,7 +736,7 @@ class Problem(ProblemBase):
         return self._tests
 
     def compile(self, *args, check_only=False):
-        self._job_cache.run_job("comp.{}".format(self._job_cache.safe_id_from_slist(list(args)), check_only=check_only))
+        self._job_cache.run_job("comp.{}".format(self._job_cache.safe_id_from_slist(list(args))), check_only=check_only)
 
     def compilation_result(self, *args):
         return self.compile_result(*args)

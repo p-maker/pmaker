@@ -1,5 +1,7 @@
 import sys, os, os.path, configparser, subprocess, shutil, tempfile, time
 
+import pmaker.problem
+
 def error(msg):
     print(msg)
 
@@ -113,6 +115,47 @@ def cmd_invoke(prob=None, imanager=None, judge=None, ui=None, argv=None):
         
     ithread.join()
     return 0
+
+
+@cmd(want=["prob", "argv"], arg="run",
+     manual="Run the solution interactively in CLI",
+     long_help="""Invokes the specified solution for interactive communication
+Usage: pmaker run <solution_name>
+
+Compiles and interactively runs the specified solution name in the CLI.
+
+Use stdin and stdout to communicate with the solution.
+
+Warning: solution is runned without been sandboxed.
+""")
+def cmd_run(prob=None, argv=None):
+    import subprocess
+
+    if (len(argv) != 1):
+        print("usage: pmaker run <solution_name>")
+        return 1
+
+    sol = argv[0]
+    
+    need_compile = False
+    try:
+        prob.compile("solutions", sol, check_only=True)
+    except pmaker.problem.ProblemJobOutdated:
+        need_compile = True
+
+    if need_compile:
+        from pmaker.judge import new_judge
+        with new_judge() as judge:
+            prob.set_judge(judge)
+            prob.compile("solutions", sol)
+    
+    prob.compile("solutions", sol)
+    path = prob.compilation_result("solutions", sol)
+    
+    res = subprocess.run(path, universal_newlines=True)
+    print("Exitted with code {}".format(res.returncode), file=sys.stderr)
+    return res.returncode
+
 
 @cmd(want=["prob", "imanager", "ui"], arg="invocation-list",
      manual="Show previous invocations",
