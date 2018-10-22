@@ -80,6 +80,7 @@ class Test:
         if self.is_manual():
             return ":manual {}".format(self.get_manual_path())
         return " | ".join(map(lambda x: " ".join(x), self.get_cmd_parts()))
+    
     def export(self):
         """
         Returns object, acceptable for serializing with json
@@ -643,9 +644,11 @@ class Problem(ProblemBase):
         return [self.relative(*src)] # TODO
     
     def __do_mpost(self, testname):
+        res = self._job_cache.safe_id_from_string(testname)
+        
         os.makedirs(self.relative("work", "_data"), exist_ok=True)
         with open(self.relative("tests.manual", testname), "r") as fsrc:
-            with open(self.relative("work", "_data", "mtest." + testname), "w") as fdst:
+            with open(self.relative("work", "_data", "mtest." + res), "w") as fdst:
                 fdst.write(fsrc.read())
 
         return [self.relative("tests.manual", testname)]
