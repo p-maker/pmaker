@@ -50,8 +50,9 @@ Following commands are provided
   pmaker tests                      # generates all the tests for the problem in current directory
   pmaker invoke <list of solutions> # invokes the specified solutions, use localhost:8128 to see the results
   pmaker invoke @all                # convenience macro
-  pmaker view-tests                 # shows all the tests, in browser
+  pmaker testview                   # shows all the tests, in browser
   pmaker invocation-list            # to view previous invokations
+  pmaker run solution               # interactively runs named solution without sandboxing (convenience function)
 
 
 Example problem
