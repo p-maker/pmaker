@@ -1,5 +1,7 @@
 import shutil, stat, os
 
+from pmaker.judge import JobResult 
+
 class JobHelperCommon:
     def __init__(self, judge):
         self.judge  = judge
@@ -69,6 +71,44 @@ class JobHelperCommon:
     def __exit__(self, _1, _2, _3):
         self.release()
 
+class JobHelperDumb(JobHelperCommon):
+    def __init__(self, judge):
+        self.job = None
+        super().__init__(judge)
+    
+    def is_ready(self):
+        return True
+
+    def is_running(self):
+        return False
+
+    def get_timeusage(self):
+        return 0
+
+    def get_wallusage(self):
+        return 0
+    
+    def get_memusage(self):
+        return 0
+    
+    def wait(self):
+        pass
+    
+    def result(self):
+        return JobResult.OK
+
+    def exit_code(self):
+        return 0
+
+    def get_failure_reason(self):
+        return ""
+    
+    def read_stdout(self):
+        return ""
+
+    def read_stderr(self):
+        return ""
+        
 class JobHelperCompilation(JobHelperCommon):
     def __init__(self, judge):
         super().__init__(judge)
@@ -84,7 +124,30 @@ class JobHelperCompilation(JobHelperCommon):
         if runnable:
             os.chmod(result, stat.S_IRWXU | stat.S_IROTH | stat.S_IRGRP)
 
+class JobHelperPyCompilation(JobHelperDumb):
+    def __init__(self, judge):
+        super().__init__(judge)
+
+    def run(self, source, c_handler=None, c_args=None):
+        self.__source = source
+
+        if c_args == None:
+            c_args = []
+            
+        if c_handler:
+            c_handler(*c_args)
+
+    def fetch(self, result, runnable=False):
+        with open(result, "w") as fp:
+            # disable site package import
+            # cause failure in the sandbox
+            fp.write("#!/usr/bin/python3 -S\n")
+            with open(self.__source) as src:
+                fp.write(src.read())
         
+        if runnable:
+            os.chmod(result, stat.S_IRWXU | stat.S_IROTH | stat.S_IRGRP)
+
 class JobHelperInvokation(JobHelperCommon):
     def __init__(self, judge):
         super().__init__(judge)
@@ -94,7 +157,7 @@ class JobHelperInvokation(JobHelperCommon):
         env.add_exe_file(source, "/prog")
         self.job = self.judge.new_job(env, self.limits, *(["./prog"] + prog_args), in_file=in_file, c_handler=c_handler, c_args=c_args, priority=self.priority)
 
-
+#Note: unused
 class JobHelperPyInvokation(JobHelperCommon):
     def __init__(self, judge):
         super().__init__(judge)
@@ -105,7 +168,7 @@ class JobHelperPyInvokation(JobHelperCommon):
         
         self.job = self.judge.new_job(env, self.limits, *(["/usr/bin/python3", "./prog.py"] + prog_args), in_file=in_file, c_handler=c_handler, c_args=c_args, priority=self.priority)
 
-
+#Note: unused
 class JobHelperBashInvokation(JobHelperCommon):
     def __init__(self, judge):
         super().__init__(judge)

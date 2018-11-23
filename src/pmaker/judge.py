@@ -416,14 +416,15 @@ class IsolatedJudge:
         import pmaker.jobhelper
         if target == "compile.g++":
             return pmaker.jobhelper.JobHelperCompilation(self)
-        if target == "invoke.g++":
+        if target == "compile.py3":
+            return pmaker.jobhelper.JobHelperPyCompilation(self)
+        
+        if target == "invoke.g++" or target == "invoke.py3":
             return pmaker.jobhelper.JobHelperInvokation(self)
-        if target == "invoke.py3":
-            return pmaker.jobhelper.JobHelperPyInvokation(self)
         if target == "invoke.bash":
             return pmaker.jobhelper.JobHelperBashInvokation(self)
         
-        raise ValueError("Unsupported job helper type")
+        raise ValueError("Unsupported job helper type {}".format(target))
 
 def new_judge():
     return IsolatedJudge()

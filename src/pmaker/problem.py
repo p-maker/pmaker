@@ -593,7 +593,7 @@ class Problem(ProblemBase):
         
         lang = "bash"
         if self._script.endswith(".py"):
-            lang = "python3"
+            lang = "py3"
 
         jh = self._judge.new_job_helper("invoke." + lang)
         limits = self._judge.new_limits()
@@ -619,9 +619,14 @@ class Problem(ProblemBase):
 
         return [self.relative(self._script)]
 
-    def __do_compile(self, src, lang="g++"):
+    def __do_compile(self, src):
         if not os.path.isfile(self.relative(*src)):
             raise ProblemError("File {} doesn't exist".format("/".join(src)))
+
+        lang = 'g++'
+        if src[-1].endswith(".py"):
+            lang = 'py3'
+
         jh = self._judge.new_job_helper("compile." + lang)
         limits = self._judge.new_limits()
         limits.set_memorylimit(256 * 1000)
@@ -653,7 +658,11 @@ class Problem(ProblemBase):
 
         return [self.relative("tests.manual", testname)]
     
-    def __do_mgen(self, cmd_prev, cmd, lang="g++"):
+    def __do_mgen(self, cmd_prev, cmd):
+        lang="g++"
+        if cmd[0].endswith('.py'):
+            lang = 'py3'
+        
         jh = self._judge.new_job_helper("invoke." + lang)
         jh.set_limits(self.get_generator_limits())
 
@@ -665,8 +674,9 @@ class Problem(ProblemBase):
         jh.wait()
 
         if not jh.result().ok():
+            print(jh.read_stderr())
             jh.release()
-            raise ProblemError("Failed to run {}".format(cmd))
+            raise ProblemError("Failed to run {}, got: {}".format(cmd, jh.result()))
 
         os.makedirs(self.relative("work", "_data"), exist_ok=True)
         with open(self.relative("work", "_data", "mgen.{}.{}".format(self._job_cache.safe_id_from_string(cmd_prev), self._job_cache.safe_id_from_slist(cmd))), "w") as fp:
