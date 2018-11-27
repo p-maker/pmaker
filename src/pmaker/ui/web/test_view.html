@@ -23,6 +23,10 @@
           {% if tests[index].get_group() != None %}
           ({{escape(tests[index].get_group())}})
           {% endif %}
+
+          {% if not prob.get_validation(index).is_ok() %}
+          <span style="color: red" title="{{prob.get_validation(index).stderr()}}">validation</span>
+          {% endif %}
         </td>
 
         <td class="data_container", onclick="open_test('{{index}}', 'input')">

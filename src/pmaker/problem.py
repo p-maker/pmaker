@@ -142,9 +142,25 @@ class ValidationStatus:
         self.prob = prob
         self.data_file = data_file
 
+        self.data = None
+
+    def load_data(self):
+        if self.data == None:
+            with open(self.data_file, "r") as fp:
+                self.data = json.load(fp)
+
     def is_ok(self):
-        with open(self.data_file, "r") as fp:
-            return json.load(fp)["exit_code"] == 0
+        return self.exit_code() == 0
+
+    def exit_code(self):
+        self.load_data() 
+
+        return self.data["exit_code"]
+    
+    def stderr(self):
+        self.load_data()
+
+        return self.data["stderr"]
     
 class TestSet:
     def __init__(self):
