@@ -257,8 +257,8 @@ global {
         print("""
 group %s {
     tests %d-%d;
-#   score ?;
-#   require ?;
+    score ?;
+    require ?;
 }
 """ % (gr, group_info[gr][0][0], group_info[gr][0][1]))
 
