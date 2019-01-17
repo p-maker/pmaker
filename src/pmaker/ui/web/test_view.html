@@ -54,7 +54,11 @@
         <td>{{group}}</td>
         <td>
           {% for (a, b) in group_info[group] %}
-          <span>{{a}}-{{b}}, </span>
+            {% if a == b %}
+              <span>{{a}}, </span>
+            {% else %}
+              <span>{{a}}-{{b}}, </span>
+            {% endif %}
           {% endfor %}
         </td>
       </tr>

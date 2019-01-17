@@ -233,6 +233,42 @@ def cmd_clean(prob=None, argv=None):
     prob.wipe(mrpropper=(argv == ["--mrpropper"]))
     return 0
 
+@cmd(want=["prob"], arg="make_valuer")
+def cmd_valuer(prob=None):
+    print("""
+global {
+    stat_to_judges 1;
+    stat_to_users 1;
+}""")
+
+    tests = prob.get_testset()
+    group_info = prob.get_testset().group_info()
+
+    test_score_list = ['0' for i in range(tests.size())]
+    
+    for gr in sorted(group_info.keys()):
+        if len(group_info[gr]) != 1:
+            print("Group {} is not contigious".format(gr), file=sys.stderr)
+            sys.exit(1)
+
+        test_score_list[group_info[gr][0][1] - 1] = '?'
+    
+    for gr in sorted(group_info.keys()):
+        print("""
+group %s {
+    tests %d-%d;
+#   score ?;
+#   require ?;
+}
+""" % (gr, group_info[gr][0][0], group_info[gr][0][1]))
+
+
+    print('''# test_score_list="{}"'''.format(" ".join(test_score_list)))
+    print("""
+# open_tests="?-?:full,?-?:brief,?-?:hidden"
+# full_user_score=?
+""")
+
 def main():
     argv = sys.argv[1:]
     if len(argv) == 0:
