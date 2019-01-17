@@ -98,8 +98,9 @@ class WebUI:
                     return
                 if parts == ["test_view"]:
                     tests = webui.prob.get_testset()
+                    group_info = tests.group_info()
                     
-                    self.render("test_view.html", prob=webui.prob, tests=tests, **self.get_template_namespace())
+                    self.render("test_view.html", prob=webui.prob, tests=tests, group_info=group_info, **self.get_template_namespace())
                     return
 
                 if parts[:2] == ["test_view", "show_test"] and len(parts) == 4 and parts[3] in ["input", "output"]:

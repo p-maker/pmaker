@@ -39,5 +39,27 @@
       </tr>
       {% endfor %}
     </table>
+
+    <br><br><br>
+    
+    {% if tests.has_groups() %}
+    <table border class="collapsed">
+      <tr>
+        <td>group</td>
+        <td>tests</td>
+      </tr>
+      
+      {% for group in sorted(group_info.keys()) %}
+      <tr>
+        <td>{{group}}</td>
+        <td>
+          {% for (a, b) in group_info[group] %}
+          <span>{{a}}-{{b}}, </span>
+          {% endfor %}
+        </td>
+      </tr>
+      {% endfor %}
+    </table>    
+    {% endif %}
   </body>
 </html>

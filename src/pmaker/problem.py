@@ -203,6 +203,28 @@ class TestSet:
 
         return res
 
+    def has_groups(self):
+        for test in self.tests:
+            if test.get_group() != None:
+                return True
+        return False
+
+    def group_info(self):
+        by_group = dict()
+
+        for i in range(1, self.size() + 1):
+            gr = self[i].get_group()
+            if gr != None:
+                if gr not in by_group:
+                    by_group[gr] = []
+                
+                if len(by_group[gr]) == 0 or by_group[gr][-1][1] != i - 1:
+                    by_group[gr].append((i, i))
+                else:
+                    by_group[gr][-1] = (by_group[gr][-1][0], i)
+
+        return by_group
+    
     @staticmethod
     def load(data):
         if type(data) != list:
