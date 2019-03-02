@@ -258,7 +258,7 @@ global {
 group %s {
     tests %d-%d;
     score ?;
-    require ?;
+    requires ?;
 }
 """ % (gr, group_info[gr][0][0], group_info[gr][0][1]))
 
