@@ -152,6 +152,9 @@ class ValidationStatus:
     def is_ok(self):
         return self.exit_code() == 0
 
+    def is_unknown(self):
+        return not os.path.exists(self.data_file)
+    
     def exit_code(self):
         self.load_data() 
 
