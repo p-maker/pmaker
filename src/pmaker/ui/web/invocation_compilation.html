@@ -36,6 +36,6 @@
   </table>
   
   {% if exists(invocation.relative("compilations", "{}_code").format(sol_id)) %}
-  <p> Compiler exitted with code {{shortly(invocation.relative("compilations", "{}_code").format(sol_id))}} </p>
+  <p> Compiler exited with code {{shortly(invocation.relative("compilations", "{}_code").format(sol_id))}} </p>
   {% endif %}  
 </body>
