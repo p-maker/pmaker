@@ -252,8 +252,13 @@ class Invokation:
             limits.set_timelimit_wall(45 * 1000)
             limits.set_memorylimit(256 * 1000)
             limits.set_proclimit(4)
+
+            job_this = None
+            if self.solutions[i].endswith(".py"):
+                job_this = self.judge.new_job_helper("compile.py3")
+            else:
+                job_this = self.judge.new_job_helper("compile.g++")
             
-            job_this = self.judge.new_job_helper("compile.g++")
             job_this.set_limits(limits)
             job_this.run(self.prob.relative("solutions", self.solutions[i]))
             self.compilation_jobs[i] = job_this
