@@ -99,8 +99,15 @@ class WebUI:
                 if parts == ["test_view"]:
                     tests = webui.prob.get_testset()
                     group_info = tests.group_info()
+
+                    def __groupcomparator(obj):
+                        info = obj[1]
+                        if len(info) == 0:
+                            return +100000000000
+                        else:
+                            return info[0][0]
                     
-                    self.render("test_view.html", prob=webui.prob, tests=tests, group_info=group_info, **self.get_template_namespace())
+                    self.render("test_view.html", prob=webui.prob, tests=tests, group_info=group_info, **self.get_template_namespace(), __groupcomparator=__groupcomparator)
                     return
 
                 if parts[:2] == ["test_view", "show_test"] and len(parts) == 4 and parts[3] in ["input", "output"]:

@@ -53,11 +53,11 @@
         <td>tests</td>
       </tr>
       
-      {% for group in sorted(group_info.keys()) %}
+      {% for (group, info) in sorted(group_info.items(), key=__groupcomparator) %}
       <tr>
         <td>{{group}}</td>
         <td>
-          {% for (a, b) in group_info[group] %}
+          {% for (a, b) in info %}
             {% if a == b %}
               <span>{{a}}, </span>
             {% else %}
