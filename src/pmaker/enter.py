@@ -245,29 +245,47 @@ global {
     group_info = prob.get_testset().group_info()
 
     test_score_list = ['0' for i in range(tests.size())]
+    sum_score = 0
     
     for gr in sorted(group_info.keys()):
         if len(group_info[gr]) != 1:
             print("Group {} is not contigious".format(gr), file=sys.stderr)
             sys.exit(1)
 
-        test_score_list[group_info[gr][0][1] - 1] = '?'
+        test_score_list[group_info[gr][0][1] - 1] = prob._parser.get("scoring", "score_" + gr, fallback="0")
     
     for gr in sorted(group_info.keys()):
+        sc = prob._parser.get("scoring", "score_" + gr, fallback="0")
+        sum_score += int(sc)
+
+        req = ""
+        line = prob._parser.get("scoring", "require_" + gr, fallback=None)
+        if line:
+            req = "requires {};".format(",".join(map(lambda s: s.strip(), line.split(";"))))
         print("""
 group %s {
     tests %d-%d;
-    score ?;
-    requires ?;
+    score %s;
+    %s
 }
-""" % (gr, group_info[gr][0][0], group_info[gr][0][1]))
+""" % (gr, group_info[gr][0][0], group_info[gr][0][1], sc, req))
 
+    samples = []
+    line = prob._parser.get("scoring", "samples", fallback=None)
+    if line:
+        samples = list(map(lambda s: s.strip(), line.split(";")))
 
-    print('''# test_score_list="{}"'''.format(" ".join(test_score_list)))
-    print("""
-# open_tests="?-?:full,?-?:brief,?-?:hidden"
-# full_user_score=?
-""")
+    print('# test_score_list="{}"'.format(" ".join(test_score_list)))
+    open_tests = []
+    for gr in sorted(group_info.keys()):
+        if gr in samples:
+            open_tests.append("%d-%d:full" % (group_info[gr][0][0], group_info[gr][0][1]))
+        else:
+            open_tests.append("%d-%d:brief" % (group_info[gr][0][0], group_info[gr][0][1]))
+    if open_tests:
+        print('# open_tests="{}"'.format(",".join(open_tests)))
+    print('# full_score=%d' % sum_score)
+    print('# full_user_score=%d' % sum_score)
 
 def main():
     argv = sys.argv[1:]

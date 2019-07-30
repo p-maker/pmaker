@@ -498,6 +498,7 @@ class Problem(ProblemBase):
         with open(self.relative("problem.cfg"), "r") as f:
             parser.readfp(f)
 
+        self._parser         = parser
         self._judge          = judge
             
         self._model_solution = parser.get("main", "model_solution", fallback=None)
