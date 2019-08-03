@@ -558,9 +558,9 @@ class Problem(ProblemBase):
 
     def get_model_limits(self):
         limits = self._judge.new_limits()
-        limits.set_memorylimit(256 * 1000)
-        limits.set_timelimit(15 * 1000)
-        limits.set_timelimit_wall(30 * 1000)
+        limits.set_memorylimit(1024 * 1000)
+        limits.set_timelimit(30 * 1000)
+        limits.set_timelimit_wall(60 * 1000)
         limits.set_proclimit(1)
         return limits
 
