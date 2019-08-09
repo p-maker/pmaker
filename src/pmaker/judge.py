@@ -183,6 +183,8 @@ class IsolatedJob:
         isolate_head = ["isolate", "--run", "--meta=/dev/stdout", "-s", "--cg", "--cg-timing", "--box-id={}".format(box_id)]
         isolate_mid  = []
         isolate_tail = ["--"] + self._command
+
+        isolate_head.append("--dir=/etc") # for g++ compilers through /etc/alternatives
         
         if self._env:
             for (tp, host, virtual) in self._env._get_instructions():
