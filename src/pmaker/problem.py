@@ -484,6 +484,9 @@ class ProblemBase:
         return os.path.exists(self.relative(*args))
 
     def parse_millis(self, s):
+        if not '.' in s:
+            return int(s) * 1000
+        
         pre,post = s.split('.', maxsplit=1)
         if len(post) > 3:
             raise ValueError("Bad millis specification")
