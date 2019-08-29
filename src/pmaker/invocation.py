@@ -90,10 +90,10 @@ class InvokeDesc:
         jobhelper.set_limits(self.limits)
 
         the_input = self.prob.relative("work", "_data", self.prob.get_test_input_data(self.the_test))
-        
-        jobhelper.run(self.invocation.relative("compilations", "{}".format(self.sol_no)), in_file=the_input, c_handler=self.invoke_done)
 
         self.jobhelper = jobhelper
+        jobhelper.run(self.invocation.relative("compilations", "{}".format(self.sol_no)), in_file=the_input, c_handler=self.invoke_done)
+
         self.state = 1 # testing
 
     def invoke_done(self):
@@ -152,15 +152,18 @@ class InvokeDesc:
         jobhelper.add_file(the_input, "/input")
         jobhelper.add_file(the_output, "/correct")
         jobhelper.add_file(self.invocation.relative("output", self.export), "/output")
-
+        jobhelper.set_userdesc("check.cpp test-{} out-{}".format(self.test_no, self.solution))
+        
         jobhelper.run(self.prob.relative("work", "compiled", "check.cpp"), prog_args=["input", "output", "correct"], c_handler=self.check_done)
 
         self.jobhelper = jobhelper
         self.state = 2 # checking
         self.redump()
+        
     def check_done(self):
         rs = self.jobhelper.result()
         from pmaker.judge import JobResult
+        
         if not rs in [JobResult.OK, JobResult.RE]:
             self.result = InvokationStatus.FL
             print(self.jobhelper.get_failure_reason())
@@ -176,6 +179,7 @@ class InvokeDesc:
                 fp.write(self.jobhelper.read_stderr())
         except:
             raise
+        
         if rs.ok_or_re():
             try:
                 with open(self.invocation.relative("output", self.export + "_checkcode"), "w") as fp:
@@ -260,6 +264,7 @@ class Invokation:
                 job_this = self.judge.new_job_helper("compile.g++")
             
             job_this.set_limits(limits)
+            job_this.set_userdesc("compile {}".format(self.solutions[i]))
             job_this.run(self.prob.relative("solutions", self.solutions[i]))
             self.compilation_jobs[i] = job_this
 

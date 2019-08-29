@@ -140,9 +140,14 @@ class IsolatedJob:
         self._exitcode = None
         self._exitsig  = None
 
+        self._userdesc = None
+
     def set_quite(self):
         self.quite = True
-    
+
+    def set_userdesc(self, desc):
+        self._userdesc = desc
+        
     def _init(self, box_id):
         subprocess.check_call(["isolate", "--cleanup", "--cg", "--box-id={}".format(box_id)], timeout=10)
         self._workdir = subprocess.check_output(["isolate", "--init", "--cg", "--box-id={}".format(box_id)], timeout=10, universal_newlines=True).strip() + "/box"
@@ -228,7 +233,10 @@ class IsolatedJob:
         cmd = isolate_head + isolate_mid + isolate_tail
         
         if not self._quite:
-            print(cmd)
+            if self._userdesc:
+                print("isolate-run box={} [{}]".format(box_id, self._userdesc))
+            else:
+                print("isolate-run box={}".format(box_id))
         
         res = subprocess.run(cmd, stdout=subprocess.PIPE, universal_newlines=True)
         
@@ -387,7 +395,7 @@ class IsolatedJudge:
     def _returnid(self, box_id):
         self._boxes.put(box_id)
     
-    def new_job(self, env, limits, *command, in_file=None, c_handler=None, c_args=None, priority=50):
+    def new_job(self, env, limits, *command, in_file=None, c_handler=None, c_args=None, priority=50, userdesc=None):
         """
         Creates new runnable Job 
         
@@ -405,6 +413,9 @@ class IsolatedJudge:
         """
 
         job = IsolatedJob(self, env, limits, *command, in_file=in_file, c_handler=c_handler, c_args=c_args)
+        if userdesc:
+            job.set_userdesc(userdesc)
+        
         self._queue.put((priority, job))
         return job
         

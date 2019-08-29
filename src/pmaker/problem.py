@@ -680,6 +680,7 @@ class Problem(ProblemBase):
         limits.set_proclimit(4)
 
         jh.set_limits(limits)
+        jh.set_userdesc("compile {}".format(src))
         jh.run(self.relative(*src))
         jh.wait()
 
@@ -715,6 +716,7 @@ class Problem(ProblemBase):
         if cmd_prev != "":
             in_file = self.relative("work", "_data", cmd_prev)
 
+        jh.set_userdesc("run {}".format(cmd))
         jh.run(self.compilation_result("source", cmd[0]), prog_args=cmd[1:], in_file=in_file)
         jh.wait()
 
@@ -742,6 +744,9 @@ class Problem(ProblemBase):
         prog_args = []
         if group != "":
             prog_args = ["--group", group]
+            jh.set_userdesc("val group={} test={}".format(group, self._job_cache.slist_from_id(test_path)))
+        else:
+            jh.set_userdesc("val test={}".format(group, self._job_cache.slist_from_id(test_path)))         
         jh.run(self.relative(self.compilation_result(self._validator)), prog_args=prog_args, in_file=in_file)
         jh.wait()
         
@@ -763,6 +768,7 @@ class Problem(ProblemBase):
 
         in_file = self.relative("work", "_data", test_path)
 
+        jh.set_userdesc("jurysol {}: {}".format(self._model_solution, self._job_cache.slist_from_id(test_path)))
         jh.run(self.relative(self.compilation_result("solutions", self._model_solution)), in_file=in_file)
         jh.wait()
         

@@ -8,6 +8,15 @@ class JobHelperCommon:
         self.limits = None
         self.env    = self.judge.new_env()
         self.priority = 50
+        self.job = None
+
+        # store this even after the inner job was released
+        self._result = None
+        self._exit_code = None
+        self._userdesc = None
+
+    def set_userdesc(self, val):
+        self._userdesc = val
         
     def add_file(self, host, virtual):
         self.env.add_file(host, virtual)
@@ -19,9 +28,13 @@ class JobHelperCommon:
         self.limits = limits
 
     def is_ready(self):
+        if self._result:
+            return True # job finished => "Ready"
         return self.job.is_ready()
 
     def is_running(self):
+        if not self.job:
+            return False
         return self.job.is_running()
 
     def get_timeusage(self):
@@ -34,7 +47,8 @@ class JobHelperCommon:
         return self.job.get_memusage()
     
     def wait(self):
-        self.job.wait()
+        if self.job:
+            self.job.wait()
     
     def is_ok(self):
         return self.result().ok()
@@ -43,13 +57,18 @@ class JobHelperCommon:
         return self.result().ok_or_re()
     
     def result(self):
+        if self._result:
+            return self._result
         return self.job.result()
 
     def exit_code(self):
+        if self._exit_code:
+            return self._exit_code
         return self.job.exit_code()
 
     def failure_reason(self):
         return self.job.failure_reason()
+    
     def get_failure_reason(self):
         return self.job.failure_reason()
     
@@ -63,7 +82,11 @@ class JobHelperCommon:
         
     def release(self):
         if self.job:
+            self._result = self.job.result()
+            self._exit_code = self.job.exit_code()
+            
             self.job.release()
+            self.job = None
 
     def __enter__(self):
         return self
@@ -117,7 +140,7 @@ class JobHelperCompilation(JobHelperCommon):
         env = self.env
         env.add_file(source, "/source.cpp")
 
-        self.job = self.judge.new_job(env, self.limits, "/usr/bin/g++", "-Wall", "-Wextra", "-std=c++14", "-O2", "/box/source.cpp", "-o", "/box/source", c_handler=c_handler, c_args=c_args, priority=self.priority)
+        self.job = self.judge.new_job(env, self.limits, "/usr/bin/g++", "-Wall", "-Wextra", "-std=c++14", "-O2", "/box/source.cpp", "-o", "/box/source", c_handler=c_handler, c_args=c_args, priority=self.priority, userdesc=self._userdesc)
 
     def fetch(self, result, runnable=False):
         shutil.copyfile(self.job.get_object_path("source"), result)
@@ -155,7 +178,7 @@ class JobHelperInvokation(JobHelperCommon):
     def run(self, source, in_file=None, prog_args=[], c_handler=None, c_args=None):
         env = self.env
         env.add_exe_file(source, "/prog")
-        self.job = self.judge.new_job(env, self.limits, *(["./prog"] + prog_args), in_file=in_file, c_handler=c_handler, c_args=c_args, priority=self.priority)
+        self.job = self.judge.new_job(env, self.limits, *(["./prog"] + prog_args), in_file=in_file, c_handler=c_handler, c_args=c_args, priority=self.priority, userdesc=self._userdesc)
 
 #Note: unused
 class JobHelperPyInvokation(JobHelperCommon):
