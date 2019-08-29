@@ -134,7 +134,7 @@ class InvokeDesc:
 
         if rs in [JobResult.FL]:
             self.result = InvokationStatus.FL
-            print(self.jobhelper.get_failure_reason())
+            print("Failure: {}".format(self.jobhelper.get_failure_reason()))
             self.state = 3 # complete
             self.jobhelper.release()
             self.redump()
@@ -166,7 +166,8 @@ class InvokeDesc:
         
         if not rs in [JobResult.OK, JobResult.RE]:
             self.result = InvokationStatus.FL
-            print(self.jobhelper.get_failure_reason())
+            with open(self.invocation.relative("output", self.export + "_check"), "w") as fp:
+                fp.write("[Failed to run checker: {}]".format(rs))
         else:
             if rs == JobResult.OK:
                 self.result = InvokationStatus.OK
@@ -174,11 +175,11 @@ class InvokeDesc:
                 code = self.jobhelper.exit_code()
                 self.result = self.prob.parse_exit_code(code)
 
-        try:
-            with open(self.invocation.relative("output", self.export + "_check"), "w") as fp:
-                fp.write(self.jobhelper.read_stderr())
-        except:
-            raise
+            try:
+                with open(self.invocation.relative("output", self.export + "_check"), "w") as fp:
+                    fp.write(self.jobhelper.read_stderr())
+            except:
+                raise
         
         if rs.ok_or_re():
             try:

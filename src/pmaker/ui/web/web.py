@@ -18,7 +18,10 @@ class WebUI:
         
         class WebHandler(http.server.BaseHTTPRequestHandler):
             def write_string(self, s):
-                self.wfile.write(bytes(s, "utf-8"))
+                try:
+                    self.wfile.write(bytes(s, "utf-8"))
+                except BrokenPipeError as ex:
+                    pass # the web-browser likely got disconnected
 
             def get_file_preview(path, limit=1024, linelimit=10):
                 try:

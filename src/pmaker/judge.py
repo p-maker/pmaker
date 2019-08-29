@@ -244,6 +244,9 @@ class IsolatedJob:
             raise Exception("Isolate returned bad exit code")
 
         self._result = self._parse_result(res.stdout)
+        if self._result == JobResult.FL:
+            self._failure_reason = "Returned by checker"
+        
         with self._lock:
             self._cv.notify_all()
 
@@ -333,10 +336,10 @@ class IsolatedJob:
         return os.path.join(self._workdir, *path)
     
     def get_stdout_path(self):
-        return os.path.join(self._workdir, "_files", "stdout")
+        return self.get_object_path("_files", "stdout")
 
     def get_stderr_path(self):
-        return os.path.join(self._workdir, "_files", "stderr")
+        return self.get_object_path("_files", "stderr")
     
     def release(self):
         """
