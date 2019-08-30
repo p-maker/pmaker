@@ -288,17 +288,21 @@ group %s {
     print('# full_user_score=%d' % sum_score)
 
 def main():
-    argv = sys.argv[1:]
-    if len(argv) == 0:
+    try:
+        argv = sys.argv[1:]
+        if len(argv) == 0:
+            argv = ["--help"]
+
+        for (matcher, command) in commands_list:
+            if (matcher == argv[0]):
+                return command(argv[1:])
+
+        print("There is no such command")
         argv = ["--help"]
 
-    for (matcher, command) in commands_list:
-        if (matcher == argv[0]):
-            return command(argv[1:])
-
-    print("There is no such command")
-    argv = ["--help"]
-
-    for (matcher, command) in commands_list:
-        if (matcher == argv[0]):
-            return command(argv[1:])
+        for (matcher, command) in commands_list:
+            if (matcher == argv[0]):
+                return command(argv[1:])
+    except KeyboardInterrupt as ex:
+        print("Interrupted")
+        sys.exit(0)
