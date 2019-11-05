@@ -7,16 +7,24 @@ td {
     padding: 4px;
 }
 
-table.limited {
-  max-width: 1000px;
+table {
+  max-width: 100%;
 }
 
 td#testview_testno {
   width: 4%;
 }
 
-td#testview_input, td#testview_output {
-  width: 42%;
+.narrowcol {
+    width: 42%;
+    max-width: 0;
+    word-wrap: break-all;
+    overflow: hidden;
+    background: rgb(240,255,255);
+}
+
+.data_text {
+    word-wrap: break-all;
 }
 
 .data_container {

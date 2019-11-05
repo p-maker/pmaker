@@ -23,7 +23,7 @@ class WebUI:
                 except BrokenPipeError as ex:
                     pass # the web-browser likely got disconnected
 
-            def get_file_preview(path, limit=1024, linelimit=10):
+            def get_file_preview(path, limit=512, linelimit=10):
                 try:
                     with open(path, "r") as f:
                         s = f.read(limit)

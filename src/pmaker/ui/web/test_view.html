@@ -13,8 +13,8 @@
     <table border class="collapsed">
       <tr>
         <td id="testview_testno">Test No</td>
-        <td id="testview_input">Input</td>
-        <td id="testview_output">Output</td>
+        <td id="testview_input narrowcol">Input</td>
+        <td id="testview_output narrowcol">Output</td>
       </tr>
       {% for index in range(1, tests.size() + 1) %}
       <tr>
@@ -33,11 +33,11 @@
           {% endif %}
         </td>
 
-        <td class="data_container", onclick="open_test('{{index}}', 'input')">
+        <td class="data_container narrowcol", onclick="open_test('{{index}}', 'input')">
           {{ shortly(prob.relative("work", "_data", prob.get_test_input_data(tests[index]))) }}
         </td>
 
-        <td class="data_container", onclick="open_test('{{index}}', 'output')">
+        <td class="data_container narrowcol", onclick="open_test('{{index}}', 'output')">
           {{ shortly(prob.relative("work", "_data", prob.get_test_output_data(tests[index]))) }}
         </td>
       </tr>
@@ -59,9 +59,13 @@
         <td>
           {% for (a, b) in info %}
             {% if a == b %}
-              <span>{{a}}, </span>
+              <span>{{a}} </span>
             {% else %}
-              <span>{{a}}-{{b}}, </span>
+              <span>{{a}}-{{b}} </span>
+            {% endif %}
+
+            {% if not loop.first %}
+              ,
             {% endif %}
           {% endfor %}
         </td>
