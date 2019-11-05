@@ -18,13 +18,13 @@ td#testview_testno {
 .narrowcol {
     width: 42%;
     max-width: 0;
-    word-wrap: break-all;
+    word-wrap: break-word;
     overflow: hidden;
     background: rgb(240,255,255);
 }
 
 .data_text {
-    word-wrap: break-all;
+    word-wrap: break-word;
 }
 
 .data_container {
