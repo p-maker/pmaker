@@ -17,6 +17,12 @@ class WebUI:
         webui = self
         
         class WebHandler(http.server.BaseHTTPRequestHandler):
+            def write_bytes(self, bts):
+                try:
+                    self.wfile.write(bts)
+                except BrokenPipeError as ex:
+                    pass # the web-browser likely got disconnected
+
             def write_string(self, s):
                 try:
                     self.wfile.write(bytes(s, "utf-8"))
@@ -78,7 +84,7 @@ class WebUI:
             def send_data(self, data, code=200):
                 self.send_response(code)
                 self.end_headers()
-                self.wfile.write(data)
+                self.write_bytes(data)
 
             def send_txt_data(self, data, code=200):
                 self.send_response(code)
