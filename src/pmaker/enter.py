@@ -260,7 +260,7 @@ global {
     sum_score = 0
     sum_user_score = 0
     
-    for gr in sorted(group_info.keys()):
+    for gr in sorted(group_info.keys(), key=int):
         if len(group_info[gr]) != 1:
             print("Group {} is not contigious".format(gr), file=sys.stderr)
             sys.exit(1)
