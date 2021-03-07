@@ -235,6 +235,7 @@ def cmd_clean(prob=None, argv=None):
 
 @cmd(want=["prob"], arg="make_valuer")
 def cmd_valuer(prob=None):
+    #print("# # # generated with pmaker # # #")
     print("""
 global {
     stat_to_judges 1;
@@ -243,9 +244,21 @@ global {
 
     tests = prob.get_testset()
     group_info = prob.get_testset().group_info()
-
+    
+    samples = []
+    offline = []
+    not_offline = []
+    line = prob._parser.get("scoring", "samples", fallback=None)
+    if line:
+        samples = list(map(lambda s: s.strip(), line.split(";")))
+        
+    line = prob._parser.get("scoring", "offline", fallback=None)
+    if line:
+        offline = list(map(lambda s: s.strip(), line.split(";")))
+    
     test_score_list = ['0' for i in range(tests.size())]
     sum_score = 0
+    sum_user_score = 0
     
     for gr in sorted(group_info.keys()):
         if len(group_info[gr]) != 1:
@@ -253,39 +266,46 @@ global {
             sys.exit(1)
 
         test_score_list[group_info[gr][0][1] - 1] = prob._parser.get("scoring", "score_" + gr, fallback="0")
+        if not gr in offline:
+            not_offline.append(gr)
     
-    for gr in sorted(group_info.keys()):
-        sc = prob._parser.get("scoring", "score_" + gr, fallback="0")
-        sum_score += int(sc)
+    for gr in sorted(group_info.keys(), key=int):
+        sc = int(prob._parser.get("scoring", "score_" + gr, fallback="0"))
+        sum_score += sc
+        if not gr in offline:
+            sum_user_score += sc
 
         req = ""
         line = prob._parser.get("scoring", "require_" + gr, fallback=None)
         if line:
             req = "requires {};".format(",".join(map(lambda s: s.strip(), line.split(";"))))
-        print("""
-group %s {
-    tests %d-%d;
-    score %s;
-    %s
-}
-""" % (gr, group_info[gr][0][0], group_info[gr][0][1], sc, req))
 
-    samples = []
-    line = prob._parser.get("scoring", "samples", fallback=None)
-    if line:
-        samples = list(map(lambda s: s.strip(), line.split(";")))
+        print("group %s {" % gr)
+        print("    tests %d-%d;" % (group_info[gr][0][0], group_info[gr][0][1]))
+        print("    score %d;" % sc)
 
+        if gr in offline:
+            print("    offline;")
+
+        if len(not_offline) != 0 and gr == not_offline[-1]:
+            print("    sets_marked_if_passed %s;" % ", ".join(not_offline))
+            
+        print("    %s" % req)
+        print("}")
+    
     print('# test_score_list="{}"'.format(" ".join(test_score_list)))
     open_tests = []
-    for gr in sorted(group_info.keys()):
+    for gr in sorted(group_info.keys(), key=int):
         if gr in samples:
             open_tests.append("%d-%d:full" % (group_info[gr][0][0], group_info[gr][0][1]))
+        elif gr in offline:
+            open_tests.append("%d-%d:hidden" % (group_info[gr][0][0], group_info[gr][0][1]))
         else:
             open_tests.append("%d-%d:brief" % (group_info[gr][0][0], group_info[gr][0][1]))
     if open_tests:
         print('# open_tests="{}"'.format(",".join(open_tests)))
     print('# full_score=%d' % sum_score)
-    print('# full_user_score=%d' % sum_score)
+    print('# full_user_score=%d' % sum_user_score)
 
 def main():
     try:
